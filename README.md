@@ -27,3 +27,6 @@ Initialize the database.
 ```bash
 $ flask run
 ```
+## License
+
+[GNU General Public License Version 3](https://github.com/Kirollos-Hanna/PWP/blob/main/LICENSE)
