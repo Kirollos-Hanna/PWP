@@ -1,6 +1,6 @@
 # PWP SPRING 2023
 # E-Commerce API
-The e-commerce API is a Python API for managing and retrieving information about products, reviews, categories, and users in an online store.
+E-Commerce API is a Python API for managing and retrieving information about products, reviews, categories, and users in an online store.
 # Group information
 * Student 1. Samuli Koponen and email
 * Student 2. Petri Kiviniemi and email
