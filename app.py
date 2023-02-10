@@ -28,8 +28,8 @@ class Review(db.Model):
     description = db.Column(db.String(256), nullable=True)
     id = db.Column(db.Integer, primary_key=True)
     rating = db.Column(db.Float, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True)
-    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"))
 
 class Product(db.Model):
     description = db.Column(db.String(256), nullable=True)
@@ -37,7 +37,7 @@ class Product(db.Model):
     images = db.Column(db.String(256), nullable=True)
     name = db.Column(db.String(256), nullable=False)
     price = db.Column(db.Float, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -46,5 +46,5 @@ class Category(db.Model):
 
 class Product_categories(db.Model):
     product_category_id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey("product.id"), unique=True)
-    category_id = db.Column(db.Integer, db.ForeignKey("category.id"), unique=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("product.id"))
+    category_id = db.Column(db.Integer, db.ForeignKey("category.id"))
