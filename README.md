@@ -27,7 +27,7 @@ Run python interpreter inside the project's directory.
 ```bash
 python
 ```
-First we create a SQLite database with SQLalchemy.
+First we create a SQLite database with SQLAlchemy.
 ```python
 from app import db, app
 ctx = app.app_context()
