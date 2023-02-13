@@ -14,18 +14,39 @@ __Remember to include all required documentation and HOWTOs, including how to cr
 Clone the repository to your machine.
 
 ```bash
-$ git clone https://github.com/Kirollos-Hanna/PWP.git
+git clone https://github.com/Kirollos-Hanna/PWP.git
 ```
 Change the directory to the project's directory and install the required dependencies.
 
 ```bash
-$ cd PWP/
-$ pip install -r requirements.txt
+cd PWP/
+pip install -r requirements.txt
 ```
 ## Usage
-Initialize the database.
+Run python interpreter inside the project's directory.
 ```bash
-$ flask run
+python
+```
+First we create a SQL lite database with SQLalchemy.
+```python
+from app import db, app
+ctx = app.app_context()
+ctx.push()
+db.create_all()
+ctx.pop()
+```
+Add an product, review, category or user in to the database. In the example below, we will add an user.
+```python
+from app import app, db, User
+
+with app.app_context():
+    user = User(username='Matti', email='matti.meikalainen@gmail.com', password='password', role='seller')
+    db.session.add(user)
+    db.session.commit()
+```
+Start the server.
+```bash
+flask run
 ```
 ## License
 
