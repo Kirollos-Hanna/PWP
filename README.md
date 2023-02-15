@@ -9,6 +9,13 @@ E-Commerce API is a Python API for managing and retrieving information about pro
 
 __Remember to include all required documentation and HOWTOs, including how to create and populate the database, how to run and test the API, the url to the entrypoint and instructions on how to setup and run the client__
 
+## Technologies Used
+
+This project uses the following technologies:
+
+* Flask: a Python web framework used for building web applications
+* SQLAlchemy: a Python library used for accessing and managing databases using the Python SQL Toolkit and Object-Relational Mapping (ORM) system
+
 ## Installation
 
 Clone the repository to your machine.
@@ -16,34 +23,21 @@ Clone the repository to your machine.
 ```bash
 git clone https://github.com/Kirollos-Hanna/PWP.git
 ```
-Change the directory to the project's directory and install the required dependencies.
+Change the directory to the project's directory.
 
 ```bash
 cd PWP/
+```
+Install the required dependencies.
+```bash
 pip install -r requirements.txt
 ```
-## Usage
-Run python interpreter inside the project's directory.
+Run the create_database-script to initialize and populate the database.
 ```bash
-python
+python create_database.py
 ```
-First we create a SQLite database with SQLAlchemy.
-```python
-from app import db, app
-ctx = app.app_context()
-ctx.push()
-db.create_all()
-ctx.pop()
-```
-Add an product, review, category or user in to the database. In the example below, we will add an user.
-```python
-from app import app, db, User
+## Usage
 
-with app.app_context():
-    user = User(username='Matti', email='matti.meikalainen@gmail.com', password='password', role='seller')
-    db.session.add(user)
-    db.session.commit()
-```
 Start the server.
 ```bash
 flask run
