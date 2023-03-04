@@ -1,4 +1,5 @@
-from app import app, db, User, Product, Category, Product_categories, Review
+from app import app
+from db import db, User, Product, Category, Review
 
 # Create an application context
 app_ctx = app.app_context()
@@ -30,23 +31,25 @@ db.session.add(category3)
 # Add random products
 product1 = Product(name="Fender Stratocaster",
                    description="A brand new Fender Stratocaster Deluxe Edition. Made in USA.",
-                   price=1999.99, user_id=user1.id)
+                   price=1999.99, user_id=user1.id, categories=[category1])
 product2 = Product(name="Lenovo Thinkpad t420", description="A refurbished business model laptop.", price=149.99,
-                   user_id=user1.id)
+                   user_id=user1.id, categories=[category2])
 product3 = Product(name="SAMSUNG 980 SSD 1TB PCle 3.0x4, NVMe M.2 2280",
                    description="UPGRADE TO IMPRESSIVE NVMe SPEED Whether you need a boost for gaming or a seamless workflow for heavy graphics, the 980 is a smart choice for outstanding SSD performance",
-                   price=69.99, user_id=user3.id)
+                   price=69.99, user_id=user3.id, categories=[category2])
 db.session.add(product1)
 db.session.add(product2)
 db.session.add(product3)
 
+# This should be unnecessary, now that the table is created in db.py
+# But I leave it in here just in case
 # Create relationships between categories and products to allow for categorization of products
-product_category1 = Product_categories(product_id=product1.id, category_id=category1.id)
-product_category2 = Product_categories(product_id=product2.id, category_id=category2.id)
-product_category3 = Product_categories(product_id=product3.id, category_id=category2.id)
-db.session.add(product_category1)
-db.session.add(product_category2)
-db.session.add(product_category3)
+#product_category1 = Product_categories(product_id=product1.id, category_id=category1.id)
+#product_category2 = Product_categories(product_id=product2.id, category_id=category2.id)
+#product_category3 = Product_categories(product_id=product3.id, category_id=category2.id)
+#db.session.add(product_category1)
+#db.session.add(product_category2)
+#db.session.add(product_category3)
 
 # Add random reviews
 review1 = Review(rating=4.9, description="An amazing guitar!!", user_id=user2.id, product_id=product1.id)
