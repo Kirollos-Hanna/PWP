@@ -25,6 +25,24 @@ class UserItem(Resource):
     def get(self, user):
         return user.serialize()
 
+    def put(self, user):
+        if not request.json:
+            raise UnsupportedMediaType
+        
+        user.deserialize(request.json)
+            
+        try:
+            db.session.add(user)
+            db.session.commit()
+            
+           
+        except IntegrityError:
+           raise Conflict(
+                409,
+                description="User with name already exists."
+                
+            )
+        return Response(status=204)
 
 class UserCollection(Resource):
 
@@ -84,6 +102,25 @@ class ProductItem(Resource):
 
     def get(self, product):
         return product.serialize()
+    
+    def put(self, product):
+        if not request.json:
+            raise UnsupportedMediaType
+        
+        product.deserialize(request.json)
+            
+        try:
+            db.session.add(product)
+            db.session.commit()
+            
+           
+        except IntegrityError:
+           raise Conflict(
+                409,
+                description="Product with name name already exists."
+                
+            )
+        return Response(status=204)
 
 class ProductCollection(Resource):
 
@@ -137,17 +174,23 @@ class ProductCollection(Resource):
                 images=request.json['images'],
                 user=user
                 )
-        except (ValueError, KeyError, IntegrityError) as e_v:
-            return Response("Failed to parse request.json", 400)
-
-        try:
+                
+            if not Product.query.filter_by(name=request.json['name']).first() == None:
+                return "Product with this handle already exists", 409
+                
             db.session.add(product)
             db.session.commit()
+                
         except IntegrityError:
             raise Conflict(
                 409,
                 description=f"Product with name {request.json['name']} already exists"
-            )
+            )        
+        except (ValueError, KeyError) as e_v:
+            return Response("Failed to parse request.json", 400)
+        
+        
+       
         
        # NOTE:: CAN BE OF USE WHEN LINKING PRODUCTS TO CATEGORIES
        # WHEN CREATING PRODUCTS, CREATES CATEGORIES IF THEY ARE NOT YET CREATED
@@ -185,6 +228,18 @@ class ReviewItem(Resource):
 
     def get(self, review):
         return review.serialize()
+        
+    def put(self, review):
+        if not request.json:
+            raise UnsupportedMediaType
+        
+        review.deserialize(request.json)
+            
+        
+        db.session.add(review)
+        db.session.commit()
+            
+        return Response(status=204)
 
 class ReviewCollection(Resource):
 
@@ -252,6 +307,18 @@ class CategoryItem(Resource):
 
     def get(self, category):
         return category.serialize()
+        
+    def put(self, cat):
+        if not request.json:
+            raise UnsupportedMediaType
+        
+        cat.deserialize(request.json)
+            
+        
+        db.session.add(cat)
+        db.session.commit()
+            
+        return Response(status=204)
 
 class CategoryCollection(Resource):
 
