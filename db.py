@@ -36,10 +36,10 @@ class User(db.Model):
         self.username = doc['username']
         self.password = doc['password']
         self.email= doc['email']
-        self.role= doc['role']
-        self.avatar = doc['avatar']
-        self.products = doc['products']
-        self.reviews = doc['reviews']
+        self.role= doc.get('role')
+        self.avatar = doc.get('avatar')
+        #self.products = doc.get('products')
+        #self.reviews = doc.get('reviews')
             
 
 class Review(db.Model):
@@ -59,6 +59,11 @@ class Review(db.Model):
             'description': self.description,
             'rating': self.rating,
         }
+        
+    def deserialize(self, doc):
+        self.description = doc['description']
+        self.rating = doc.get('rating')
+        
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,6 +79,7 @@ class Product(db.Model):
 
     def serialize(self):
         return {
+            'id': self.id,
             'name': self.name,
             'price': self.price,
             'description': self.description,
@@ -81,15 +87,15 @@ class Product(db.Model):
         }
 
     def deserialize(self, doc):
-        self.id = doc['id']
+        #self.id = doc.get('id')
         self.name = doc['name']
-        self.value = doc['price']
-        self.description = doc['description']
-        self.images = doc['images']
-        self.user_id = doc['user_id']
-        self.user = doc['user']
-        self.reviews = doc['reviews']
-        self.categories = doc['categories']
+        self.price = doc['price']
+        self.description = doc.get('description')
+        self.images = doc.get('images')
+        self.user_id = doc.get('user_id')
+        #self.user = doc.get('user')
+        #self.reviews = doc.get('reviews')
+        #self.categories = doc.get('categories')
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -103,3 +109,7 @@ class Category(db.Model):
             'name': self.name,
             'image': self.image,
         }
+        
+    def deserialize(self, doc):
+        self.image = doc.get('image')
+        self.name = doc['name']
