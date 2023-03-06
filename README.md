@@ -42,6 +42,22 @@ Start the server.
 ```bash
 flask run
 ```
+Run the tests.
+```bash
+python ut.py
+```
+**Usage examples:**
+```bash
+# Create an user called "johndoe"
+curl -X POST -H "Content-Type: application/json" -d '{"username":"johndoe", "password":"password", "email":"johndoe@mail.com", "role":"Seller"}' http://localhost:5000/api/users/
+# Add a product to sell for user "johndoe"
+curl -X POST -H "Content-Type: application/json" -d '{"name":"1984", "username": "johndoe", "price":19.99, "description":"Written by George Orwell", "categories":["Books"]}' http://localhost:5000/api/products/
+# Retrieve all products
+curl -X GET http://127.0.0.1:5000/api/products/
+# Retrieve the added product 1984
+curl -X GET http://localhost:5000/api/products/1984/
+
+```
 ## License
 
 [GNU General Public License Version 3](https://github.com/Kirollos-Hanna/PWP/blob/main/LICENSE)
