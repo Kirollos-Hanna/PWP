@@ -36,6 +36,7 @@ class UserItem(Resource):
         if cached_user:
             return cached_user.serialize()
 
+        cache.set("user_"+str(user.id), user)
         return user.serialize()
 
     def put(self, user):
@@ -51,6 +52,7 @@ class UserItem(Resource):
             db.session.add(user)
             db.session.commit()
             cache.set("user_"+str(user.id), user)
+            cache.delete("user_all")
 
         except IntegrityError:
             raise Conflict(
@@ -64,6 +66,7 @@ class UserItem(Resource):
     def delete(self, user):
         db.session.delete(user)
         db.session.commit()
+        cache.delete("user_all")
 
         return Response(status=200)
 
@@ -71,7 +74,6 @@ class UserItem(Resource):
 class UserCollection(Resource):
 
     def get(self):
-        # TODO update all users when one changes
         cached_users = cache.get("user_all")
         if cached_users:
             return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
@@ -113,10 +115,12 @@ class UserCollection(Resource):
         try:
             db.session.add(user)
             db.session.commit()
+            cache.set("user_"+str(user.id), user)
         except IntegrityError:
             raise Conflict(
-                description=f"User with name {request.json['username']} already exists"
+                description=f"User with name {request.json['username']} or email {request.json['email']} already exists"
             )
+        cache.delete("user_all")
 
         response = make_response()
         api_url = api.url_for(UserItem, user=user)
