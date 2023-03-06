@@ -52,7 +52,7 @@ class User(db.Model):
         props["password"] = {
             "description": "User password",
             "type": "string",
-            "minLength": 6,
+            "minLength": 4,
             "maxLength": 256
         }
         props["email"] = {
