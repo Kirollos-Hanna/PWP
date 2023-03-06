@@ -61,7 +61,7 @@ class UserItem(Resource):
         except KeyError as e_v:
             raise BadRequest(description=str(e_v))
 
-        return Response(status=200)
+        return Response(status=204)
 
     def delete(self, user):
         db.session.delete(user)
@@ -142,40 +142,40 @@ class ProductItem(Resource):
             product.deserialize(request.json)
 
             user = None
-            if 'username' in request.json:
+            if 'user_id' in request.json:
                 try:
                     user = User.query.filter_by(
-                        username=request.json['username']).first()
+                        id=request.json['user_id']).first()
                     if user:
                         product.user = user
                 except (IntegrityError, KeyError) as e_i:
                     user = None
 
-            categories = None
-            if 'categories' in request.json:
-                try:
-                    categories = Category.query.filter(
-                        Category.name.in_(request.json['categories'])).all()
-                    if categories:
-                        product.categories = categories
-                except (IntegrityError, KeyError) as e_i:
-                    print(
-                        "No categories found in the db"
-                    )
-                    categories = None
+            #categories = None
+            #if 'categories' in request.json:
+                #try:
+                    #categories = Category.query.filter(
+                        #Category.name.in_(request.json['categories'])).all()
+                    #if categories:
+                        #product.categories = categories
+                #except (IntegrityError, KeyError) as e_i:
+                    #print(
+                        #"No categories found in the db"
+                    #)
+                    #categories = None
 
-            reviews = None
-            if 'reviews' in request.json:
-                try:
-                    reviews = Review.query.filter(
-                        Review.name.in_(request.json['reviews'])).all()
-                    if reviews:
-                        product.reviews = reviews
-                except (IntegrityError, KeyError) as e_i:
-                    print(
-                        "No reviews found in the db"
-                    )
-                    reviews = None
+            #reviews = None
+            #if 'reviews' in request.json:
+                #try:
+                    #reviews = Review.query.filter(
+                        #Review.name.in_(request.json['reviews'])).all()
+                    #if reviews:
+                        #product.reviews = reviews
+                #except (IntegrityError, KeyError) as e_i:
+                    #print(
+                        #"No reviews found in the db"
+                    #)
+                    #reviews = None
 
             try:
                 validate(product.serialize(),
@@ -211,10 +211,10 @@ class ProductCollection(Resource):
                 'price': product.price,
                 'description': product.description,
                 'images': product.images,
-                'user_id': product.user_id,
-                'user': None if type(product.user) == type(None) else product.user.serialize(),
-                'reviews': [review.serialize() for review in product.reviews],
-                'category': [category.serialize() for category in product.categories],
+                'user_id': product.user_id
+                #'user': None if type(product.user) == type(None) else product.user.serialize(),
+                #'reviews': [review.serialize() for review in product.reviews],
+                #'category': [category.serialize() for category in product.categories],
             })
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(products_json), status=200)
 
@@ -229,22 +229,22 @@ class ProductCollection(Resource):
 
         try:
             user = User.query.filter_by(
-                username=request.json['username']).first()
+                id=request.json['user_id']).first()
         except (IntegrityError, KeyError) as e_i:
             raise Conflict(
                 description="User not found in the db"
             )
 
-        categories = None
-        if 'categories' in request.json:
-            try:
-                categories = Category.query.filter(
-                    Category.name.in_(request.json['categories'])).all()
-            except (IntegrityError, KeyError) as e_i:
-                print(
-                    "No categories found in the db"
-                )
-                categories = None
+        #categories = None
+        #if 'categories' in request.json:
+            #try:
+                #categories = Category.query.filter(
+                    #Category.name.in_(request.json['categories'])).all()
+            #except (IntegrityError, KeyError) as e_i:
+                #print(
+                    #"No categories found in the db"
+                #)
+                #categories = None
 
         try:
             product = Product(
@@ -254,8 +254,8 @@ class ProductCollection(Resource):
                 images=json.dumps(request.json['images']) if 'images' in request.json else None,
                 user=user,
             )
-            if categories:
-                product.categories = categories
+            #if categories:
+                #product.categories = categories
 
             db.session.add(product)
             db.session.commit()
@@ -387,19 +387,19 @@ class CategoryItem(Resource):
     def get(self, category):
         return category.serialize()
 
-    def put(self, cat):
+    def put(self, category):
         if not request.json:
             raise UnsupportedMediaType
 
-        cat.deserialize(request.json)
+        category.deserialize(request.json)
 
-        db.session.add(cat)
+        db.session.add(category)
         db.session.commit()
 
         return Response(status=204)
 
-    def delete(self, cat):
-        db.session.delete(cat)
+    def delete(self, category):
+        db.session.delete(category)
         db.session.commit()
 
         return Response(status=200)
