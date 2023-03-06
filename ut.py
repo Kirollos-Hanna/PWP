@@ -50,7 +50,7 @@ prod_data = {
   
 }
 
-prod_api_url_put = 'http://localhost:5000/api/products/example_product/'
+prod_api_url_put = 'http://localhost:5000/api/products/Makkara/'
 put_prod_data = {
     "name": "Makkara",
     "price": 15.15,
@@ -84,6 +84,7 @@ test_get_collection(users_api_url)
 test_get_by_loc(user_loc)
 
 prod_loc = test_post_to_collection(prod_api_url, prod_data)
+test_put_to_item(put_prod_data)
 test_get_collection(prod_api_url)
 test_get_by_loc(prod_loc)
 
