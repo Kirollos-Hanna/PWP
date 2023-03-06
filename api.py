@@ -32,11 +32,11 @@ class DeleteAll(Resource):
 
 class UserItem(Resource):
     def get(self, user):
-        cached_user = cache.get("user_"+str(user.id))
-        if cached_user:
-            return cached_user.serialize()
+        #cached_user = cache.get("user_"+str(user.id))
+        #if cached_user:
+            #return cached_user.serialize()
 
-        cache.set("user_"+str(user.id), user)
+        #cache.set("user_"+str(user.id), user)
         return user.serialize()
 
     def put(self, user):
@@ -51,8 +51,8 @@ class UserItem(Resource):
                 raise BadRequest(description=str(e_v))
             db.session.add(user)
             db.session.commit()
-            cache.set("user_"+str(user.id), user)
-            cache.delete("user_all")
+            #cache.set("user_"+str(user.id), user)
+            #cache.delete("user_all")
 
         except IntegrityError:
             raise Conflict(
@@ -66,7 +66,7 @@ class UserItem(Resource):
     def delete(self, user):
         db.session.delete(user)
         db.session.commit()
-        cache.delete("user_all")
+        #cache.delete("user_all")
 
         return Response(status=200)
 
@@ -74,9 +74,9 @@ class UserItem(Resource):
 class UserCollection(Resource):
 
     def get(self):
-        cached_users = cache.get("user_all")
-        if cached_users:
-            return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
+        #cached_users = cache.get("user_all")
+        #if cached_users:
+            #return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
         users = User.query.all()
         users_json = []
         for user in users:
@@ -89,7 +89,7 @@ class UserCollection(Resource):
                 'products': [product.serialize() for product in user.products],
                 'reviews': [review.serialize() for review in user.reviews]
             })
-        cache.set("user_all", users_json)
+        #cache.set("user_all", users_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(users_json), status=200)
 
     def post(self):
@@ -115,12 +115,12 @@ class UserCollection(Resource):
         try:
             db.session.add(user)
             db.session.commit()
-            cache.set("user_"+str(user.id), user)
+            #cache.set("user_"+str(user.id), user)
         except IntegrityError:
             raise Conflict(
                 description=f"User with name {request.json['username']} or email {request.json['email']} already exists"
             )
-        cache.delete("user_all")
+        #cache.delete("user_all")
 
         response = make_response()
         api_url = api.url_for(UserItem, user=user)
