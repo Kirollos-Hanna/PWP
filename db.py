@@ -108,7 +108,7 @@ class Review(db.Model):
     def json_schema():
         schema = {
             "type": "object",
-            "required": ["rating", "product_name", "username"]
+            "required": ["rating", "product_id", "user_id"]
         }
 
         props = schema["properties"] = {}
@@ -120,16 +120,16 @@ class Review(db.Model):
             "maximum": 10,
         }
 
-        props["username"] = {
-            "description": "The username of the reviewer",
-            "type": "string",
+        props["user_id"] = {
+            "description": "The user id of the reviewer",
+            "type": "integer",
             "minLength": 1,
             "maxLength": 256
         }
 
-        props["product_name"] = {
-            "description": "The product being reviewed",
-            "type": "string",
+        props["product_id"] = {
+            "description": "The product id being reviewed",
+            "type": "integer",
             "minLength": 1,
             "maxLength": 256
         }
@@ -148,7 +148,7 @@ class Review(db.Model):
         self.id = doc['id'] if 'id' in doc else self.id
         self.rating = doc['rating'] if 'rating' in doc else self.rating
         self.description = doc['description'] if 'description' in doc else self.description
-        self.user = doc['user'] if 'user' in doc else self.user
+        self.user_id = doc['user_id'] if 'user_id' in doc else self.user_id
         self.product = doc['product'] if 'product' in doc else self.product
 
 
@@ -293,15 +293,15 @@ class Category(db.Model):
             "maxLength": 256
         }
 
-        props["product_names"] = {
-            "description": "A list of product names related to the category",
-            "type": "array",
-            "items": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-            },
-        }
+        #props["product_names"] = {
+            #"description": "A list of product names related to the category",
+            #"type": "array",
+            #"items": {
+                #"type": "string",
+                #"minLength": 1,
+                #"maxLength": 256
+            #},
+        #}
         return schema
 
     def serialize(self):
