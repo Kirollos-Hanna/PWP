@@ -31,9 +31,11 @@ class DeleteAll(Resource):
 
 
 class UserItem(Resource):
-    # TODO clear/update cache when put is successful
-    @cache.cached(timeout=60)
     def get(self, user):
+        cached_user = cache.get("user_"+str(user.id))
+        if cached_user:
+            return cached_user.serialize()
+
         return user.serialize()
 
     def put(self, user):
@@ -46,9 +48,9 @@ class UserItem(Resource):
                 validate(user.serialize(), User.json_schema())
             except ValidationError as e_v:
                 raise BadRequest(description=str(e_v))
-
             db.session.add(user)
             db.session.commit()
+            cache.set("user_"+str(user.id), user)
 
         except IntegrityError:
             raise Conflict(
@@ -69,6 +71,10 @@ class UserItem(Resource):
 class UserCollection(Resource):
 
     def get(self):
+        # TODO update all users when one changes
+        cached_users = cache.get("user_all")
+        if cached_users:
+            return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
         users = User.query.all()
         users_json = []
         for user in users:
@@ -81,6 +87,7 @@ class UserCollection(Resource):
                 'products': [product.serialize() for product in user.products],
                 'reviews': [review.serialize() for review in user.reviews]
             })
+        cache.set("user_all", users_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(users_json), status=200)
 
     def post(self):
@@ -240,7 +247,7 @@ class ProductCollection(Resource):
                 name=request.json['name'],
                 price=request.json['price'],
                 description=request.json['description'] if 'description' in request.json else None,
-                images=request.json['images'] if 'images' in request.json else None,
+                images=json.dumps(request.json['images']) if 'images' in request.json else None,
                 user=user,
             )
             if categories:
