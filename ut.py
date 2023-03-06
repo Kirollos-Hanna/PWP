@@ -15,46 +15,62 @@ def test_get_by_loc(loc):
 
 def test_post_to_collection(api_url, data):
     x = requests.post(api_url, json=data)
-    print(x.headers['location'])
+    #print(x.headers['location'])
     return x.headers['location']
 
 def test_get_collection(api_url):
     x = requests.get(api_url)
     print(x.text)
     return x.text
+    
+def test_put_to_item(data):
+    api_url = 'http://localhost:5000' + loc
+    x = requests.put(api_url, json=data)
+    print(x.status_code)
+    return x.status_code
+    
 
-users_api_url = 'http://localhost:5000/api/users/'
+
+users_api_url = 'http://localhost:5000/api/users/Jaakko'
 user_data = {
-    'username': 'Jaakko',
-    'password': 'Jaakkonen',
-    'email': 'jaakko@gmail.com',
-    'avatar': "random.avatar.string",
-    'role': 'admin',
-    'products': [],
-    'reviews': [],
+    "username": "Jaakko",
+    "password": "Jaakkonen",
+    "email": "jaakko@gmail.com",
+    #"avatar": "https://google.com/",
+    "role": "Admin"
 }
 
 prod_api_url = 'http://localhost:5000/api/products/'
 prod_data = {
-    'name': 'Makkara',
-    'price': 100,
-    'description': 'Perus juusto-chili',
-    'images': 'IMAGE_URL_STR',
-    'categories': ['MEAT']
+    "name": "Makkara",
+    "price": 19.89,
+    "description": "Perus juusto-chili",
+    #"images": "https://www.google.com/",
+    "user_id": 2
+  
 }
+
+prod_api_url_put = 'http://localhost:5000/api/products/example_product/'
+put_prod_data = {
+    "name": "Makkara",
+    "price": 15.15,
+    "description": "Perus juusto-chili",
+    "user_id": 3
+}
+
 
 review_api_url = 'http://localhost:5000/api/reviews/'
 review_data = {
-    'description': 'Ihan hyvaa makkaraa, sopivan tulista.',
-    'rating': 5,
-    'username': 'Jaakko',
-    'product_name': 'Makkara'
+    "description": "ihan hyvaa makkaraa, sopivan tulista.",
+    "rating": 5,
+    "user_id": 1,
+    "product_id": 5
 }
 
 categories_api_url = 'http://localhost:5000/api/categories/'
 category_data = {
-    'name': 'NOT_MEAT',
-    'image': 'IMAGE_OF_NOT_MEAT_URL',
+    "name": "NOT_MEAT",
+    #"image": "IMAGE_OF_NOT_MEAT_URL",
 }
 
 def delete_all():
