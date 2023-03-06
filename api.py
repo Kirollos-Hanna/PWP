@@ -41,7 +41,8 @@ class UserItem(Resource):
                 validate(user.serialize(), User.json_schema())
             except ValidationError as e_v:
                 raise BadRequest(description=str(e_v))
-
+                
+            db.session.add(user)
             db.session.commit()
 
         except IntegrityError:
