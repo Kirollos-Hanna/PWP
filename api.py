@@ -121,17 +121,57 @@ class ProductItem(Resource):
         if not request.json:
             raise UnsupportedMediaType
 
-        product.deserialize(request.json)
-
         try:
-            db.session.add(product)
+            product.deserialize(request.json)
+
+            user = None
+            if 'username' in request.json:
+                try:
+                    user = User.query.filter_by(
+                        username=request.json['username']).first()
+                    if user:
+                        product.user = user
+                except (IntegrityError, KeyError) as e_i:
+                    user = None
+
+            categories = None
+            if 'categories' in request.json:
+                try:
+                    categories = Category.query.filter(
+                        Category.name.in_(request.json['categories'])).all()
+                    if categories:
+                        product.categories = categories
+                except (IntegrityError, KeyError) as e_i:
+                    print(
+                        "No categories found in the db"
+                    )
+                    categories = None
+
+            reviews = None
+            if 'reviews' in request.json:
+                try:
+                    reviews = Review.query.filter(
+                        Review.name.in_(request.json['reviews'])).all()
+                    if reviews:
+                        product.reviews = reviews
+                except (IntegrityError, KeyError) as e_i:
+                    print(
+                        "No reviews found in the db"
+                    )
+                    reviews = None
+
+            try:
+                validate(product.serialize(), Product.json_schema(is_updating=True))
+            except ValidationError as e_v:
+                raise BadRequest(description=str(e_v))
+
             db.session.commit()
 
         except IntegrityError:
             raise Conflict(
-                description="Product with name name already exists."
+                description="Product with name already exists."
             )
-        return Response(status=204)
+        return Response(status=200)
 
     def delete(self, product):
         db.session.delete(product)
@@ -388,7 +428,7 @@ class CategoryCollection(Resource):
             )
             db.session.add(category)
             db.session.commit()
-            
+
         except (ValueError, KeyError, IntegrityError) as e_v:
             return Response("Failed to parse request.json", 400)
 
@@ -397,6 +437,7 @@ class CategoryCollection(Resource):
         response.headers['location'] = api_url
         response.status_code = 201
         return response
+
 
 api.add_resource(UserItem, "/api/users/<user:user>/")
 api.add_resource(UserCollection, "/api/users/")

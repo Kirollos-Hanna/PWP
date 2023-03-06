@@ -166,11 +166,18 @@ class Product(db.Model):
         "Category", secondary=Product_categories, back_populates="products")
 
     @staticmethod
-    def json_schema():
+    def json_schema(is_updating):
         schema = {
             "type": "object",
             "required": ["name", "price", "username"]
         }
+        
+        if is_updating:
+            schema = {
+                "type": "object",
+                "required": ["name", "price"]
+            }
+            
         props = schema["properties"] = {}
 
         props["username"] = {
@@ -203,7 +210,7 @@ class Product(db.Model):
 
         props["images"] = {
             "description": "A list of product image urls",
-            "type": "array",
+            "type": ["array", "null"],
             "items": {
                 "type": "string",
                 "format": "uri",
@@ -216,13 +223,23 @@ class Product(db.Model):
 
         props["categories"] = {
             "description": "An array of category names that this product belongs to",
-            "type": "array",
+            "type": ["array", "null"],
             "items": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
             },
             "maxItems": 255
+        }
+        
+        props["reviews"] = {
+            "description": "An array of review ids that belong to this product",
+            "type": ["array", "null"],
+            "items": {
+                "type": "number",
+                "minLength": 1,
+                "maxLength": 256
+            },
         }
         return schema
 
@@ -236,15 +253,14 @@ class Product(db.Model):
         }
 
     def deserialize(self, doc):
-        #self.id = doc.get('id')
-        self.name = doc['name']
-        self.price = doc['price']
-        self.description = doc.get('description')
-        self.images = doc.get('images')
-        self.user_id = doc.get('user_id')
-        #self.user = doc.get('user')
-        #self.reviews = doc.get('reviews')
-        #self.categories = doc.get('categories')
+        self.id = doc['id'] if 'id' in doc else self.id
+        self.name = doc['name'] if 'name' in doc else self.name
+        self.price = doc['price'] if 'price' in doc else self.price
+        self.description = doc['description'] if 'description' in doc else self.description
+        self.images = doc['images'] if 'images' in doc else self.images
+        self.user = doc['user'] if 'user' in doc else self.user
+        self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
+        self.categories = doc['categories'] if 'categories' in doc else self.categories
 
 
 class Category(db.Model):
