@@ -335,8 +335,8 @@ class ReviewCollection(Resource):
                 'rating': review.rating,
                 'user_id': review.user_id,
                 'product_id': review.product.id,
-                'user': review.user.serialize(),
-                'product': review.product.serialize(),
+                #'user': review.user.serialize(),
+                #'product': review.product.serialize(),
             })
 
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(reviews_json), status=200)
@@ -352,9 +352,9 @@ class ReviewCollection(Resource):
 
         try:
             user = User.query.filter_by(
-                username=request.json['username']).first()
+                id=request.json['user_id']).first()
             product = Product.query.filter_by(
-                name=request.json['product_name']).first()
+                id=request.json['product_id']).first()
             if user is None or product is None:
                 return Response("User or product not found in the db", status=409)
         except IntegrityError as e_v:
@@ -416,7 +416,7 @@ class CategoryCollection(Resource):
                 'id': category.id,
                 'name': category.name,
                 'image': category.image,
-                'products': [product.serialize() for product in category.products]
+                #'products': [product.serialize() for product in category.products]
             })
 
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(category_json), status=200)
@@ -430,21 +430,21 @@ class CategoryCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        if 'product_names' in request.json:
-            try:
-                products = Product.query.filter(
-                    Product.name.in_(request.json['product_names'])).all()
-            except (IntegrityError, KeyError) as e_i:
-                print(
-                    "No products found in the db"
-                )
-                products = None
+        #if 'product_names' in request.json:
+            #try:
+                #products = Product.query.filter(
+                    #Product.name.in_(request.json['product_names'])).all()
+            #except (IntegrityError, KeyError) as e_i:
+                #print(
+                    #"No products found in the db"
+                #)
+                #products = None
 
         try:
             category = Category(
                 name=request.json['name'],
-                image=request.json['image'] if 'image' in request.json else None,
-                products=products
+                image=request.json['image'] if 'image' in request.json else None
+                #products=products
             )
             db.session.add(category)
             db.session.commit()
