@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Mar  5 13:22:05 2023
 
-@author: Petri Kiviniemi
-"""
 
 from app import app
 from db import db, User, Product, Category, Review
