@@ -56,11 +56,11 @@ db.session.add(product3)
 
 # Add random reviews
 review1 = Review(rating=4.9, description="An amazing guitar!!",
-                 user_id=user2.id, product_id=product1.id)
-review2 = Review(rating=0.5, description="Bad laptop, can't run Fortnite with 300 fps.", user_id=user2.id,
-                 product_id=product2.id)
-review3 = Review(rating=4.4, description="Almost the perfect laptop! Thinkpads rock!", user_id=user3.id,
-                 product_id=product2.id)
+                 user=user2, product=product1)
+review2 = Review(rating=0.5, description="Bad laptop, can't run Fortnite with 300 fps.", user=user2,
+                 product=product2)
+review3 = Review(rating=4.4, description="Almost the perfect laptop! Thinkpads rock!", user=user3,
+                 product=product2)
 db.session.add(review1)
 db.session.add(review2)
 db.session.add(review3)
