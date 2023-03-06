@@ -1,30 +1,80 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.engine import Engine
-from sqlalchemy import event
+import enum
 
 db = SQLAlchemy()
 
-#Create table for many-to-many relationship between categories and products
+# Create table for many-to-many relationship between categories and products
 Product_categories = db.Table("product_categories",
-       db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),             
-       db.Column("category_id", db.Integer, db.ForeignKey("category.id"), primary_key=True)             
-)
+                              db.Column("product_id", db.Integer, db.ForeignKey(
+                                  "product.id"), primary_key=True),
+                              db.Column("category_id", db.Integer, db.ForeignKey(
+                                  "category.id"), primary_key=True)
+                              )
+
+
+class RoleType(str, enum.Enum):
+    Customer = "Customer"
+    Admin = "Admin"
+    Seller = "Seller"
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    username = db.Column(db.String(256), nullable=False)
-    password=db.Column(db.String(256), nullable=False)
-    email=db.Column(db.String(256), nullable=False)
-    role = db.Column(db.String(256), nullable=True)
-    avatar=db.Column(db.String(256), nullable=True)
+    username = db.Column(db.String(256), nullable=False, unique=True)
+    password = db.Column(db.String(256), nullable=False)
+    email = db.Column(db.String(256), nullable=False, unique=True)
+    role = db.Column(db.Enum(RoleType), nullable=False)
+    avatar = db.Column(db.String(256), nullable=True)
 
     products = db.relationship("Product", back_populates="user")
     reviews = db.relationship("Review", back_populates="user")
 
+    @staticmethod
+    def json_schema():
+        schema = {
+            "type": "object",
+            "required": ["username", "role", "password", "email"]
+        }
+        props = schema["properties"] = {}
+        props["username"] = {
+            "description": "The user's name",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+        }
+        props["role"] = {
+            "description": "The user's role",
+            "type": "string",
+            "enum": ["Customer", "Admin", "Seller"],
+            "default": "Customer"
+        }
+        props["password"] = {
+            "description": "User password",
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 256
+        }
+        props["email"] = {
+            "description": "User email",
+            "type": "string",
+            "format": "email",
+            "minLength": 1,
+            "maxLength": 256
+        }
+        props["avatar"] = {
+            "description": "The url of the user's avatar",
+            "type": ["string", "null"],
+            "format": "uri",
+            "pattern": "^https?://",
+            "minLength": 1,
+            "maxLength": 256
+        }
+        return schema
+
     def serialize(self):
         return {
+            'id': self.id,
             'username': self.username,
             'password': self.password,
             'email': self.email,
@@ -33,49 +83,148 @@ class User(db.Model):
         }
 
     def deserialize(self, doc):
-        self.username = doc['username']
-        self.password = doc['password']
-        self.email= doc['email']
-        self.role= doc.get('role')
-        self.avatar = doc.get('avatar')
-        #self.products = doc.get('products')
-        #self.reviews = doc.get('reviews')
-            
+        self.username = doc['username'] if 'username' in doc else self.username
+        self.password = doc['password'] if 'password' in doc else self.password
+        self.email = doc['email'] if 'email' in doc else self.email
+        self.role = doc['role'] if 'role' in doc else self.role
+        self.avatar = doc['avatar'] if 'avatar' in doc else self.avatar
+        self.products = doc['products'] if 'products' in doc else self.products
+        self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
+
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(65535), nullable=True)
     rating = db.Column(db.Float, nullable=False)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    product_id = db.Column(db.Integer, db.ForeignKey("product.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey(
+        "product.id"), nullable=False)
 
     user = db.relationship("User", back_populates="reviews")
     product = db.relationship("Product", back_populates="reviews")
 
+    @staticmethod
+    def json_schema():
+        schema = {
+            "type": "object",
+            "required": ["rating", "product_name", "username"]
+        }
+
+        props = schema["properties"] = {}
+
+        props["rating"] = {
+            "description": "The rating of the product by a user from 1 to 10",
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10,
+        }
+
+        props["username"] = {
+            "description": "The username of the reviewer",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+        }
+
+        props["product_name"] = {
+            "description": "The product being reviewed",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+        }
+
+        return schema
+
     def serialize(self):
         return {
+            'id': self.id,
             'username': self.user.username,
             'description': self.description,
             'rating': self.rating,
         }
-        
+
     def deserialize(self, doc):
-        self.description = doc['description']
-        self.rating = doc.get('rating')
-        
+        self.id = doc['id'] if 'id' in doc else self.id
+        self.rating = doc['rating'] if 'rating' in doc else self.rating
+        self.description = doc['description'] if 'description' in doc else self.description
+        self.user = doc['user'] if 'user' in doc else self.user
+        self.product = doc['product'] if 'product' in doc else self.product
+
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(256), nullable=False, unique=True)
     price = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(65535), nullable=True)
     images = db.Column(db.String(65535), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     user = db.relationship("User", back_populates="products")
     reviews = db.relationship("Review", back_populates="product")
-    categories = db.relationship("Category", secondary=Product_categories, back_populates="products")
+    categories = db.relationship(
+        "Category", secondary=Product_categories, back_populates="products")
+
+    @staticmethod
+    def json_schema():
+        schema = {
+            "type": "object",
+            "required": ["name", "price", "username"]
+        }
+        props = schema["properties"] = {}
+
+        props["username"] = {
+            "description": "The username of the user who created this product",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+        }
+
+        props["name"] = {
+            "description": "Product Name",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+        }
+
+        props["price"] = {
+            "description": "Product Price",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+        }
+
+        props["description"] = {
+            "description": "Product description",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65535
+        }
+
+        props["images"] = {
+            "description": "A list of product image urls",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https?://",
+                "minLength": 1,
+                "maxLength": 256
+            },
+            "maxItems": 255
+        }
+
+        props["categories"] = {
+            "description": "An array of category names that this product belongs to",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+            },
+            "maxItems": 255
+        }
+        return schema
 
     def serialize(self):
         return {
@@ -97,19 +246,56 @@ class Product(db.Model):
         #self.reviews = doc.get('reviews')
         #self.categories = doc.get('categories')
 
+
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(256), nullable=True)
-    name = db.Column(db.String(256), nullable=False)
+    name = db.Column(db.String(256), nullable=False, unique=True)
 
-    products = db.relationship("Product", secondary=Product_categories, back_populates="categories")
+    products = db.relationship(
+        "Product", secondary=Product_categories, back_populates="categories")
+
+    @staticmethod
+    def json_schema():
+        schema = {
+            "type": "object",
+            "required": ["name"]
+        }
+        props = schema["properties"] = {}
+        props["name"] = {
+            "description": "Category name",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+        }
+        props["image"] = {
+            "description": "A url for an image related to the category",
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https?://",
+            "minLength": 1,
+            "maxLength": 256
+        }
+
+        props["product_names"] = {
+            "description": "A list of product names related to the category",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+            },
+        }
+        return schema
 
     def serialize(self):
         return {
+            'id': self.id,
             'name': self.name,
             'image': self.image,
         }
-        
+
     def deserialize(self, doc):
-        self.image = doc.get('image')
-        self.name = doc['name']
+        self.id = doc['id'] if 'id' in doc else self.id
+        self.name = doc['name'] if 'name' in doc else self.name
+        self.image = doc['image'] if 'image' in doc else self.image
