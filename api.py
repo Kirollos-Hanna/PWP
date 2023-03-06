@@ -7,8 +7,11 @@ from werkzeug.routing import BaseConverter
 from werkzeug.exceptions import NotFound, Conflict, BadRequest, UnsupportedMediaType
 from converters import UserConverter
 from jsonschema import validate, ValidationError
+from flask_caching import Cache
 
 api = Api()
+
+cache = Cache(config={'CACHE_TYPE': 'simple', "CACHE_DEFAULT_TIMEOUT": 300})
 
 
 class DeleteAll(Resource):
@@ -28,6 +31,8 @@ class DeleteAll(Resource):
 
 
 class UserItem(Resource):
+    # TODO clear/update cache when put is successful
+    @cache.cached(timeout=60)
     def get(self, user):
         return user.serialize()
 
@@ -41,7 +46,7 @@ class UserItem(Resource):
                 validate(user.serialize(), User.json_schema())
             except ValidationError as e_v:
                 raise BadRequest(description=str(e_v))
-                
+
             db.session.add(user)
             db.session.commit()
 
@@ -162,7 +167,8 @@ class ProductItem(Resource):
                     reviews = None
 
             try:
-                validate(product.serialize(), Product.json_schema(is_updating=True))
+                validate(product.serialize(),
+                         Product.json_schema(is_updating=True))
             except ValidationError as e_v:
                 raise BadRequest(description=str(e_v))
 
@@ -206,7 +212,7 @@ class ProductCollection(Resource):
             raise UnsupportedMediaType
 
         try:
-            validate(request.json, Product.json_schema())
+            validate(request.json, Product.json_schema(is_updating=False))
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
@@ -218,6 +224,7 @@ class ProductCollection(Resource):
                 description="User not found in the db"
             )
 
+        categories = None
         if 'categories' in request.json:
             try:
                 categories = Category.query.filter(
@@ -235,8 +242,9 @@ class ProductCollection(Resource):
                 description=request.json['description'] if 'description' in request.json else None,
                 images=request.json['images'] if 'images' in request.json else None,
                 user=user,
-                categories=categories
             )
+            if categories:
+                product.categories = categories
 
             db.session.add(product)
             db.session.commit()
@@ -439,7 +447,8 @@ class CategoryCollection(Resource):
         response.status_code = 201
         return response
 
-#Routing resources
+# Routing resources
+
 
 api.add_resource(UserItem, "/api/users/<user:user>/")
 api.add_resource(UserCollection, "/api/users/")
