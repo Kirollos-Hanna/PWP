@@ -196,7 +196,7 @@ class Product(db.Model):
 
         props["price"] = {
             "description": "Product Price",
-            "type": "integer",
+            "type": "number",
             "minimum": 1,
             "maximum": 100000
         }
