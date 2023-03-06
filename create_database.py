@@ -30,7 +30,7 @@ db.session.add(category1)
 db.session.add(category2)
 db.session.add(category3)
 
-#Commit the changes
+#Commit the changes, this is done multiple times since example products and reviews use example data from categories and users.
 
 db.session.commit()
 
@@ -47,7 +47,7 @@ db.session.add(product1)
 db.session.add(product2)
 db.session.add(product3)
 
-#Commit the changes
+#Commit the changes, this is done multiple times since example products and reviews use example data from categories and users.
 
 db.session.commit()
 
@@ -71,7 +71,7 @@ db.session.add(review1)
 db.session.add(review2)
 db.session.add(review3)
 
-# Commit the changes
+# Commit the changes for final db
 db.session.commit()
 
 # Pop the application context
