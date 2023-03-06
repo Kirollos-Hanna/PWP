@@ -178,7 +178,7 @@ class ProductItem(Resource):
             raise Conflict(
                 description="Product with name already exists."
             )
-        return Response(status=200)
+        return Response(status=204)
 
     def delete(self, product):
         db.session.delete(product)
