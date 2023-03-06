@@ -439,6 +439,7 @@ class CategoryCollection(Resource):
         response.status_code = 201
         return response
 
+#Routing resources
 
 api.add_resource(UserItem, "/api/users/<user:user>/")
 api.add_resource(UserCollection, "/api/users/")
