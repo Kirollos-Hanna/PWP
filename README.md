@@ -50,8 +50,10 @@ python ut.py
 ```bash
 # Create an user called "johndoe"
 curl -X POST -H "Content-Type: application/json" -d '{"username":"johndoe", "password":"password", "email":"johndoe@mail.com", "role":"Seller"}' http://localhost:5000/api/users/
-# Add a product to sell for user "johndoe"
-curl -X POST -H "Content-Type: application/json" -d '{"name":"1984", "username": "johndoe", "price":19.99, "description":"Written by George Orwell", "categories":["Books"]}' http://localhost:5000/api/products/
+# Retrieve user's "johndoe" information and check his id
+curl -X GET http://localhost:5000/api/users/johndoe/
+# Add a product to sell for user "johndoe" using his id
+curl -X POST -H "Content-Type: application/json" -d '{"name":"1984", "user_id": 4, "price":19.99, "description":"Written by George Orwell", "categories":["Books"]}' http://localhost:5000/api/products/
 # Retrieve all products
 curl -X GET http://127.0.0.1:5000/api/products/
 # Retrieve the added product 1984
