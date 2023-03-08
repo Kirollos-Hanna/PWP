@@ -150,7 +150,7 @@ class Review(db.Model):
         self.rating = doc['rating'] if 'rating' in doc else self.rating
         self.description = doc['description'] if 'description' in doc else self.description
         self.user_name = doc['user_name'] if 'user_name' in doc else self.user_name
-        self.product = doc['product'] if 'product' in doc else self.product
+        self.product_name = doc['product_name'] if 'product_name' in doc else self.product_name
 
 
 class Product(db.Model):
