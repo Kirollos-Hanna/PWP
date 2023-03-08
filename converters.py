@@ -8,14 +8,14 @@ from werkzeug.exceptions import NotFound
 
 class UserConverter(BaseConverter):
 
-    def to_python(self, username):
-        db_user = User.query.filter_by(username=username).first()
+    def to_python(self, user_name):
+        db_user = User.query.filter_by(name=user_name).first()
         if db_user is None:
             raise NotFound
         return db_user
 
     def to_url(self, db_user):
-        return db_user.username
+        return db_user.name
 
 class ProductConverter(BaseConverter):
 
@@ -30,14 +30,14 @@ class ProductConverter(BaseConverter):
 
 class ReviewConverter(BaseConverter):
 
-    def to_python(self, review_id):
-        db_review = Review.query.filter_by(id=review_id).first()
+    def to_python(self, prod_name):
+        db_review = Review.query.filter_by(product_name=prod_name).first()
         if db_review is None:
             raise NotFound
         return db_review
     
     def to_url(self, db_review):
-        return str(db_review.id)
+        return str(db_review)
 
 class CategoryConverter(BaseConverter):
 
