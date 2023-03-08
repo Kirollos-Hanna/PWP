@@ -307,11 +307,16 @@ class ReviewItem(Resource):
     def put(self, review):
         if not request.json:
             raise UnsupportedMediaType
+        try:
+            review.deserialize(request.json)
 
-        review.deserialize(request.json)
-
-        db.session.add(review)
-        db.session.commit()
+            db.session.add(review)
+            db.session.commit()
+            
+        except IntegrityError:
+            raise Conflict(
+                description="Product_name or user_name doesn't exist in db."
+            )
 
         return Response(status=204)
 
