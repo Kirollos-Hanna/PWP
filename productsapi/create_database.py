@@ -1,8 +1,18 @@
 
 
-from mainProject import app
-from db import db, User, Product, Category, Review
 
+from path import Path
+import sys
+
+# directory reach
+directory = Path(__file__).abspath()
+
+# setting path
+sys.path.append(directory.parent.parent)
+from productsapi import create_app, db
+from productsapi.db import db, User, Product, Category, Review
+
+app = create_app()
 # Create an application context
 app_ctx = app.app_context()
 app_ctx.push()
