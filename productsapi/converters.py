@@ -1,4 +1,4 @@
-from db import User, Product, Review, Category
+from productsapi.db import User, Product, Review, Category
 from werkzeug.routing import BaseConverter
 from werkzeug.exceptions import NotFound
 

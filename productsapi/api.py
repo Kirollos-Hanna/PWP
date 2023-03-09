@@ -1,11 +1,11 @@
 from flask import Flask, Response, request, make_response
 from flask_restful import Api, Resource
 import json
-from db import db, User, Product, Product_categories, Review, Category
+from productsapi.db import db, User, Product, Product_categories, Review, Category
 from sqlalchemy.exc import IntegrityError
 from werkzeug.routing import BaseConverter
 from werkzeug.exceptions import NotFound, Conflict, BadRequest, UnsupportedMediaType
-from converters import UserConverter
+from productsapi.converters import UserConverter
 from jsonschema import validate, ValidationError
 from flask_caching import Cache
 
@@ -32,11 +32,11 @@ class DeleteAll(Resource):
 
 class UserItem(Resource):
     def get(self, user):
-        #cached_user = cache.get("user_"+str(user.id))
-        #if cached_user:
-            #return cached_user.serialize()
+        cached_user = cache.get("user_"+str(user.id))
+        if cached_user:
+            return cached_user
 
-        #cache.set("user_"+str(user.id), user)
+        cache.set("user_"+str(user.id), user.serialize())
         return user.serialize()
 
     def put(self, user):
@@ -51,8 +51,8 @@ class UserItem(Resource):
                 raise BadRequest(description=str(e_v))
             db.session.add(user)
             db.session.commit()
-            #cache.set("user_"+str(user.id), user)
-            #cache.delete("user_all")
+            cache.set("user_"+str(user.id), user.serialize())
+            cache.delete("users_all")
 
         except IntegrityError:
             raise Conflict(
@@ -66,17 +66,17 @@ class UserItem(Resource):
     def delete(self, user):
         db.session.delete(user)
         db.session.commit()
-        #cache.delete("user_all")
+        cache.delete("users_all")
 
-        return Response(status=200)
+        return Response(status=204)
 
 
 class UserCollection(Resource):
 
     def get(self):
-        #cached_users = cache.get("user_all")
-        #if cached_users:
-            #return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
+        cached_users = cache.get("users_all")
+        if cached_users:
+            return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
         users = User.query.all()
         users_json = []
         for user in users:
@@ -89,7 +89,7 @@ class UserCollection(Resource):
                 'products': [product.serialize() for product in user.products],
                 'reviews': [review.serialize() for review in user.reviews]
             })
-        #cache.set("user_all", users_json)
+        cache.set("users_all", users_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(users_json), status=200)
 
     def post(self):
@@ -115,12 +115,12 @@ class UserCollection(Resource):
         try:
             db.session.add(user)
             db.session.commit()
-            #cache.set("user_"+str(user.id), user)
+            cache.set("user_"+str(user.id), user.serialize())
         except IntegrityError:
             raise Conflict(
                 description=f"User with name {request.json['username']} or email {request.json['email']} already exists"
             )
-        #cache.delete("user_all")
+        cache.delete("users_all")
 
         response = make_response()
         api_url = api.url_for(UserItem, user=user)
@@ -132,6 +132,11 @@ class UserCollection(Resource):
 class ProductItem(Resource):
 
     def get(self, product):
+        cached_product = cache.get("product_"+str(product.id))
+        if cached_product:
+            return cached_product
+
+        cache.set("product_"+str(product.id), product.serialize())
         return product.serialize()
 
     def put(self, product):
@@ -149,41 +154,29 @@ class ProductItem(Resource):
                     if user:
                         product.user = user
                 except (IntegrityError, KeyError) as e_i:
-                    user = None
+                    raise BadRequest
 
-            #categories = None
-            #if 'categories' in request.json:
-                #try:
-                    #categories = Category.query.filter(
-                        #Category.name.in_(request.json['categories'])).all()
-                    #if categories:
-                        #product.categories = categories
-                #except (IntegrityError, KeyError) as e_i:
-                    #print(
-                        #"No categories found in the db"
-                    #)
-                    #categories = None
-
-            #reviews = None
-            #if 'reviews' in request.json:
-                #try:
-                    #reviews = Review.query.filter(
-                        #Review.name.in_(request.json['reviews'])).all()
-                    #if reviews:
-                        #product.reviews = reviews
-                #except (IntegrityError, KeyError) as e_i:
-                    #print(
-                        #"No reviews found in the db"
-                    #)
-                    #reviews = None
+            categories = None
+            if 'categories' in request.json:
+                try:
+                    categories = Category.query.filter(
+                        Category.name.in_(request.json['categories'])).all()
+                    if categories:
+                        product.categories = categories
+                    else:
+                        raise BadRequest
+                except (IntegrityError, KeyError) as e_i:
+                    raise BadRequest
 
             try:
-                validate(product.serialize(),
+                validate(request.json,
                          Product.json_schema(is_updating=True))
             except ValidationError as e_v:
                 raise BadRequest(description=str(e_v))
 
             db.session.commit()
+            cache.set("product_"+str(product.id), product.serialize())
+            cache.delete("products_all")
 
         except IntegrityError:
             raise Conflict(
@@ -194,28 +187,31 @@ class ProductItem(Resource):
     def delete(self, product):
         db.session.delete(product)
         db.session.commit()
+        cache.delete("products_all")
 
-        return Response(status=200)
+        return Response(status=204)
 
 
 class ProductCollection(Resource):
 
     def get(self):
+        cached_products = cache.get("products_all")
+        if cached_products:
+            return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_products), status=200)
         products = Product.query.all()
         products_json = []
-        # TODO:: Verify if we need all these values ?
         for product in products:
             products_json.append({
                 'id': product.id,
                 'name': product.name,
                 'price': product.price,
                 'description': product.description,
-                'images': product.images,
-                'user_id': product.user_id
-                #'user': None if type(product.user) == type(None) else product.user.serialize(),
-                #'reviews': [review.serialize() for review in product.reviews],
-                #'category': [category.serialize() for category in product.categories],
+                'images': json.loads(product.images) if product.images else None,
+                'user_id': product.user_id,
+                'reviews': [review.serialize(include_product=False) for review in product.reviews],
+                'categories': [category.serialize(long=False) for category in product.categories],
             })
+        cache.set("products_all", products_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(products_json), status=200)
 
     def post(self):
@@ -235,30 +231,32 @@ class ProductCollection(Resource):
                 description="User not found in the db"
             )
 
-        #categories = None
-        #if 'categories' in request.json:
-            #try:
-                #categories = Category.query.filter(
-                    #Category.name.in_(request.json['categories'])).all()
-            #except (IntegrityError, KeyError) as e_i:
-                #print(
-                    #"No categories found in the db"
-                #)
-                #categories = None
+        categories = None
+        if 'categories' in request.json:
+            try:
+                categories = Category.query.filter(
+                    Category.name.in_(request.json['categories'])).all()
+            except (IntegrityError, KeyError) as e_i:
+                print(
+                    "No categories found in the db"
+                )
+                categories = None
 
         try:
             product = Product(
                 name=request.json['name'],
                 price=request.json['price'],
                 description=request.json['description'] if 'description' in request.json else None,
-                images=json.dumps(request.json['images']) if 'images' in request.json else None,
-                user=user,
+                images=json.dumps(
+                    request.json['images']) if 'images' in request.json else None,
+                user=user
             )
-            #if categories:
-                #product.categories = categories
+            if categories:
+                product.categories = categories
 
             db.session.add(product)
             db.session.commit()
+            cache.set("product_"+str(product.id), product.serialize())
 
         except IntegrityError as e_i:
             raise Conflict(
@@ -267,6 +265,7 @@ class ProductCollection(Resource):
         except (ValueError, KeyError) as e_v:
             return Response("Failed to parse request.json", 400)
 
+        cache.delete("products_all")
        # NOTE:: CAN BE OF USE WHEN LINKING PRODUCTS TO CATEGORIES
        # WHEN CREATING PRODUCTS, CREATES CATEGORIES IF THEY ARE NOT YET CREATED
        # try:
@@ -302,32 +301,49 @@ class ProductCollection(Resource):
 class ReviewItem(Resource):
 
     def get(self, review):
+        cached_review = cache.get("review_"+str(review.id))
+        if cached_review:
+            return cached_review
+
+        cache.set("review_"+str(review.id), review.serialize())
         return review.serialize()
 
     def put(self, review):
         if not request.json:
             raise UnsupportedMediaType
 
+        if 'user_id' in request.json:
+            raise BadRequest(description="Cannot update user id")
+
+        if 'product_id' in request.json:
+            raise BadRequest(description="Cannot update product id")
+
         review.deserialize(request.json)
 
         db.session.add(review)
         db.session.commit()
+        cache.set("review_"+str(review.id), review.serialize())
+        cache.delete("reviews_all")
 
         return Response(status=204)
 
     def delete(self, review):
         db.session.delete(review)
         db.session.commit()
+        cache.delete("reviews_all")
 
-        return Response(status=200)
+        return Response(status=204)
 
 
 class ReviewCollection(Resource):
 
     def get(self):
+        cached_reviews = cache.get("reviews_all")
+        if cached_reviews:
+            return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_reviews), status=200)
         reviews = Review.query.all()
         reviews_json = []
-        # TODO:: Verify if we need all these values ?
+
         for review in reviews:
             reviews_json.append({
                 'id': review.id,
@@ -335,10 +351,8 @@ class ReviewCollection(Resource):
                 'rating': review.rating,
                 'user_id': review.user_id,
                 'product_id': review.product.id,
-                #'user': review.user.serialize(),
-                #'product': review.product.serialize(),
             })
-
+        cache.set("reviews_all", reviews_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(reviews_json), status=200)
 
     def post(self):
@@ -374,6 +388,8 @@ class ReviewCollection(Resource):
 
         db.session.add(review)
         db.session.commit()
+        cache.set("review_"+str(review.id), review.serialize())
+        cache.delete("reviews_all")
 
         response = make_response()
         api_url = api.url_for(ReviewItem, review=review)
@@ -385,40 +401,66 @@ class ReviewCollection(Resource):
 class CategoryItem(Resource):
 
     def get(self, category):
+        cached_category = cache.get("category_"+str(category.id))
+        if cached_category:
+            return cached_category
+
+        cache.set("category_"+str(category.id), category.serialize())
         return category.serialize()
 
     def put(self, category):
         if not request.json:
             raise UnsupportedMediaType
 
+        try:
+            validate(request.json, Category.json_schema(is_updating=True))
+        except ValidationError as e_v:
+            raise BadRequest(description=str(e_v))
+
         category.deserialize(request.json)
+
+        if 'product_names' in request.json:
+            try:
+                products = Product.query.filter(
+                    Product.name.in_(request.json['product_names'])).all()
+                if not products:
+                    raise BadRequest(description="Product names do not exist")
+                else:
+                    category.products = products
+            except (IntegrityError, KeyError) as e_i:
+                raise BadRequest(description="Product names do not exist")
 
         db.session.add(category)
         db.session.commit()
+        cache.set("category_"+str(category.id), category.serialize())
+        cache.delete("categories_all")
 
         return Response(status=204)
 
     def delete(self, category):
         db.session.delete(category)
         db.session.commit()
+        cache.delete("categories_all")
 
-        return Response(status=200)
+        return Response(status=204)
 
 
 class CategoryCollection(Resource):
 
     def get(self):
+        cached_categories = cache.get("categories_all")
+        if cached_categories:
+            return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_categories), status=200)
         categories = Category.query.all()
         category_json = []
-        # TODO:: Verify if we need all these values ?
         for category in categories:
             category_json.append({
                 'id': category.id,
                 'name': category.name,
                 'image': category.image,
-                #'products': [product.serialize() for product in category.products]
+                # 'products': [product.serialize(long=False) for product in category.products]
             })
-
+        cache.set("categories_all", category_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(category_json), status=200)
 
     def post(self):
@@ -430,27 +472,34 @@ class CategoryCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        #if 'product_names' in request.json:
-            #try:
-                #products = Product.query.filter(
-                    #Product.name.in_(request.json['product_names'])).all()
-            #except (IntegrityError, KeyError) as e_i:
-                #print(
-                    #"No products found in the db"
-                #)
-                #products = None
+        products = None
+        if 'product_names' in request.json:
+            try:
+                products = Product.query.filter(
+                    Product.name.in_(request.json['product_names'])).all()
+                if not products:
+                    raise BadRequest(description="Product names do not exist")
+            except (IntegrityError, KeyError) as e_i:
+                print(
+                    "No products found in the db"
+                )
+                products = None
 
         try:
             category = Category(
                 name=request.json['name'],
                 image=request.json['image'] if 'image' in request.json else None
-                #products=products
             )
+            if products:
+                category.products = products
             db.session.add(category)
             db.session.commit()
+            cache.set("category_"+str(category.id), category.serialize())
 
         except (ValueError, KeyError, IntegrityError) as e_v:
             return Response("Failed to parse request.json", 400)
+
+        cache.delete("categories_all")
 
         response = make_response()
         api_url = api.url_for(CategoryItem, category=category)

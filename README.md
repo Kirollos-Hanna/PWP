@@ -40,7 +40,7 @@ python create_database.py
 
 Start the server.
 ```bash
-flask run
+FLASK_APP=productsapi flask run
 ```
 Run the tests.
 ```bash

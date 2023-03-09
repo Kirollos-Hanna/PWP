@@ -1,6 +1,6 @@
 
 
-from app import app
+from mainProject import app
 from db import db, User, Product, Category, Review
 
 # Create an application context

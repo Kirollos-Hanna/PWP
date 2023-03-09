@@ -19,3 +19,5 @@ typing_extensions==4.5.0
 urllib3==1.26.14
 Werkzeug==2.2.3
 Flask-Caching==2.0.2
+pytest==7.2.2
+Faker==17.6.0

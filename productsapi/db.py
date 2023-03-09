@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 import enum
+import json
 
 db = SQLAlchemy()
 
@@ -72,15 +73,23 @@ class User(db.Model):
         }
         return schema
 
-    def serialize(self):
-        return {
+    def serialize(self, long=True):
+        serialized_user = {
             'id': self.id,
             'username': self.username,
             'password': self.password,
             'email': self.email,
             'role': self.role,
-            'avatar': self.avatar,
+            'avatar': self.avatar
         }
+
+        if long:
+            serialized_user["products"] = [product.serialize(
+                long=False) for product in self.products]
+            serialized_user["reviews"] = [review.serialize(
+                include_user=False) for review in self.reviews]
+
+        return serialized_user
 
     def deserialize(self, doc):
         self.username = doc['username'] if 'username' in doc else self.username
@@ -136,13 +145,20 @@ class Review(db.Model):
 
         return schema
 
-    def serialize(self):
-        return {
+    def serialize(self, include_product=True, include_user=True):
+        serialized_review = {
             'id': self.id,
-            'username': self.user.username,
             'description': self.description,
             'rating': self.rating,
         }
+
+        if include_user:
+            serialized_review['user'] = self.user.serialize(long=False)
+
+        if include_product:
+            serialized_review['product'] = self.product.serialize(long=False)
+
+        return serialized_review
 
     def deserialize(self, doc):
         self.id = doc['id'] if 'id' in doc else self.id
@@ -171,13 +187,12 @@ class Product(db.Model):
             "type": "object",
             "required": ["name", "price", "user_id"]
         }
-        
+
         if is_updating:
             schema = {
                 "type": "object",
-                "required": ["name", "price"]
             }
-            
+
         props = schema["properties"] = {}
 
         props["user_id"] = {
@@ -221,46 +236,43 @@ class Product(db.Model):
             "maxItems": 255
         }
 
-        #props["categories"] = {
-            #"description": "An array of category names that this product belongs to",
-            #"type": ["array", "null"],
-            #"items": {
-                #"type": "string",
-                #"minLength": 1,
-                #"maxLength": 256
-            #},
-            #"maxItems": 255
-        #}
-        
-        #props["reviews"] = {
-            #"description": "An array of review ids that belong to this product",
-            #"type": ["array", "null"],
-            #"items": {
-                #"type": "number",
-                #"minLength": 1,
-                #"maxLength": 256
-            #},
-        #}
+        props["categories"] = {
+            "description": "An array of category names that this product belongs to",
+            "type": ["array", "null"],
+            "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+            },
+            "maxItems": 255
+        }
+
         return schema
 
-    def serialize(self):
-        return {
+    def serialize(self, long=True):
+        serialized_product = {
             'id': self.id,
             'name': self.name,
             'price': self.price,
             'description': self.description,
-            'images': self.images,
+            'images': json.loads(self.images) if self.images else None
         }
+
+        if long:
+            serialized_product["categories"] = [category.serialize(
+                long=False) for category in self.categories]
+            serialized_product["reviews"] = [review.serialize(
+                include_product=False) for review in self.reviews]
+
+        return serialized_product
 
     def deserialize(self, doc):
         self.id = doc['id'] if 'id' in doc else self.id
         self.name = doc['name'] if 'name' in doc else self.name
         self.price = doc['price'] if 'price' in doc else self.price
         self.description = doc['description'] if 'description' in doc else self.description
-        self.images = doc['images'] if 'images' in doc else self.images
+        self.images = json.dumps(doc['images']) if 'images' in doc else self.images
         self.user_id = doc['user_id'] if 'user_id' in doc else self.user_id
-        #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
-        #self.categories = doc['categories'] if 'categories' in doc else self.categories
 
 
 class Category(db.Model):
@@ -272,11 +284,17 @@ class Category(db.Model):
         "Product", secondary=Product_categories, back_populates="categories")
 
     @staticmethod
-    def json_schema():
+    def json_schema(is_updating=False):
         schema = {
             "type": "object",
             "required": ["name"]
         }
+        
+        if is_updating:
+            schema = {
+                "type": "object",
+            }
+            
         props = schema["properties"] = {}
         props["name"] = {
             "description": "Category name",
@@ -293,23 +311,29 @@ class Category(db.Model):
             "maxLength": 256
         }
 
-        #props["product_names"] = {
-            #"description": "A list of product names related to the category",
-            #"type": "array",
-            #"items": {
-                #"type": "string",
-                #"minLength": 1,
-                #"maxLength": 256
-            #},
-        #}
+        props["product_names"] = {
+            "description": "A list of product names related to the category",
+            "type": "array",
+            "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+            },
+        }
         return schema
 
-    def serialize(self):
-        return {
+    def serialize(self, long=True):
+        serialized_category = {
             'id': self.id,
             'name': self.name,
             'image': self.image,
         }
+
+        if long:
+            serialized_category["products"] = [
+                product.serialize(long=False) for product in self.products]
+
+        return serialized_category
 
     def deserialize(self, doc):
         self.id = doc['id'] if 'id' in doc else self.id
