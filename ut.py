@@ -33,7 +33,7 @@ def test_put_to_item(data):
 
 users_api_url = 'http://localhost:5000/api/users/Jaakko'
 user_data = {
-    "username": "Jaakko",
+    "name": "Jaakko",
     "password": "Jaakkonen",
     "email": "jaakko@gmail.com",
     #"avatar": "https://google.com/",
