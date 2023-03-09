@@ -31,24 +31,62 @@ class DeleteAll(Resource):
 
 
 class UserItem(Resource):
-    def get(self, user):
+    def get(self, username, product):
+    
+        user = User.query.filter_by(name=username).first()
+        prod = Product.query.filter_by(name=product).first()
         cached_user = cache.get("user_"+str(user.id))
         if cached_user:
             return cached_user
+        
 
-        cache.set("user_"+str(user.id), user.serialize())
+        
+        if not prod:
+            raise Conflict(
+                description="This product doesn't exist in db."
+            )
+        
+        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
+            
+            raise Conflict(
+                description="User with this product doesn't exist in db."
+            )
+            
+        cache.set("username", user.serialize())    
         return user.serialize()
+        #NOTE: if you do a successful get request once like this: api/Products/Fender Stratocaster/users/minni/,
+        #due to caching you will get the same result if you search with a wrong username.
+            
 
-    def put(self, user):
+    def put(self, username, product):
         if not request.json:
             raise UnsupportedMediaType
 
         try:
-            user.deserialize(request.json)
-            try:
-                validate(user.serialize(), User.json_schema())
-            except ValidationError as e_v:
-                raise BadRequest(description=str(e_v))
+            validate(request.json, User.json_schema())
+          
+        except ValidationError as e_v:
+            raise BadRequest(description=str(e_v))
+        
+        user = User.query.filter_by(name=username).first()
+        prod = Product.query.filter_by(name=product).first()
+
+        
+        if not prod:
+            raise Conflict(
+                description="This product doesn't exist in db."
+            )
+        
+        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
+            
+            raise Conflict(
+                description="User with this product doesn't exist in db."
+            )
+
+        
+        user.deserialize(request.json)
+        
+        try:
             db.session.add(user)
             db.session.commit()
             cache.set("user_"+str(user.id), user.serialize())
@@ -144,36 +182,38 @@ class ProductItem(Resource):
             raise UnsupportedMediaType
 
         try:
-            product.deserialize(request.json)
+            validate(request.json, Product.json_schema())
+            
+        except ValidationError as e_v:
+            raise BadRequest(description=str(e_v))
+            
+        product.deserialize(request.json)
 
-            user = None
-            if 'user_name' in request.json:
-                try:
-                    user = User.query.filter_by(
-                        name=request.json['user_name']).first()
-                    if user:
-                        product.user = user
-                except (IntegrityError, KeyError) as e_i:
-                    raise BadRequest
-
-            categories = None
-            if 'categories' in request.json:
-                try:
-                    categories = Category.query.filter(
-                        Category.name.in_(request.json['categories'])).all()
-                    if categories:
-                        product.categories = categories
-                    else:
-                        raise BadRequest
-                except (IntegrityError, KeyError) as e_i:
-                    raise BadRequest
-
+        user = None
+        if 'user_name' in request.json:
             try:
-                validate(request.json,
-                         Product.json_schema(is_updating=True))
-            except ValidationError as e_v:
-                raise BadRequest(description=str(e_v))
+                user = User.query.filter_by(
+                    name=request.json['user_name']).first()
+                if user:
+                    product.user = user
+            except (IntegrityError, KeyError) as e_i:
+                raise BadRequest
 
+        categories = None
+        if 'categories' in request.json:
+            try:
+                categories = Category.query.filter(
+                    Category.name.in_(request.json['categories'])).all()
+                if categories:
+                    product.categories = categories
+                else:
+                    raise BadRequest
+            except (IntegrityError, KeyError) as e_i:
+                raise BadRequest
+
+           
+        try:
+            db.session.add(product)
             db.session.commit()
             cache.set("product_"+str(product.id), product.serialize())
             cache.delete("products_all")
@@ -300,27 +340,60 @@ class ProductCollection(Resource):
 
 class ReviewItem(Resource):
 
-    def get(self, review):
+    def get(self, rev, product):
+    
+        review = Review.query.filter_by(id=rev).first()
+        prod = Product.query.filter_by(name=product).first()
         cached_review = cache.get("review_"+str(review.id))
+        
         if cached_review:
             return cached_review
+        
+        if not prod:
+            raise Conflict(
+                description="This product doesn't exist in db."
+            )
+            
+        if not Review.query.filter_by(id=rev).filter_by(product_name=product).first():
+            raise Conflict(
+                description="This review doesn't exist in db."
+            )
 
         cache.set("review_"+str(review.id), review.serialize())
         return review.serialize()
 
-    def put(self, review):
+    def put(self, rev, product):
         if not request.json:
             raise UnsupportedMediaType
         try:
-            review.deserialize(request.json)
+            validate(request.json, Review.json_schema())
+            
+        except ValidationError as e_v:
+            raise BadRequest(description=str(e_v))
+            
+        prod = Product.query.filter_by(name=product).first()
+        review = Review.query.filter_by(id=rev).first()
+        print (prod, review)
 
-            if 'user_name' in request.json:
-                raise BadRequest(description="Cannot update user name")
+        if not prod:
+            raise Conflict(
+                description="This product doesn't exist in db."
+            )
+            
+        if not Review.query.filter_by(id=rev).filter_by(product_name=product).first():
+            raise Conflict(
+                description="This review doesn't exist in db."
+            )
+            
+        review.deserialize(request.json)
 
-            if 'product_name' in request.json:
-                raise BadRequest(description="Cannot update product name")
+        #if 'user_name' in request.json:
+            #raise BadRequest(description="Cannot update user name")
 
-            review.deserialize(request.json)
+        #if 'product_name' in request.json:
+            #raise BadRequest(description="Cannot update product name")
+
+        try:   
 
             db.session.add(review)
             db.session.commit()
@@ -422,7 +495,7 @@ class CategoryItem(Resource):
             raise UnsupportedMediaType
 
         try:
-            validate(request.json, Category.json_schema(is_updating=True))
+            validate(request.json, Category.json_schema())
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
@@ -519,14 +592,14 @@ class CategoryCollection(Resource):
 # Routing resources
 
 
-api.add_resource(UserItem, "/api/users/<user:user>/")
-api.add_resource(UserCollection, "/api/users/")
+api.add_resource(UserItem, "/api/products/<product>/users/<username>/")
+api.add_resource(UserCollection, "/api/products/users/")
 
 api.add_resource(ProductItem, "/api/products/<product:product>/")
 api.add_resource(ProductCollection, "/api/products/")
 
-api.add_resource(ReviewItem, "/api/reviews/<review:review>/")
-api.add_resource(ReviewCollection, "/api/reviews/")
+api.add_resource(ReviewItem, "/api/products/<product>/reviews/<rev>/")
+api.add_resource(ReviewCollection, "/api/products/reviews/")
 
 api.add_resource(CategoryItem, "/api/categories/<category:category>/")
 api.add_resource(CategoryCollection, "/api/categories/")
