@@ -30,14 +30,14 @@ class ProductConverter(BaseConverter):
 
 class ReviewConverter(BaseConverter):
 
-    def to_python(self, prod_name):
-        db_review = Review.query.filter_by(product_name=prod_name).first()
+    def to_python(self, review_id):
+        db_review = Review.query.filter_by(id=review_id).first()
         if db_review is None:
             raise NotFound
         return db_review
     
     def to_url(self, db_review):
-        return str(db_review)
+        return str(db_review.id)
 
 class CategoryConverter(BaseConverter):
 
