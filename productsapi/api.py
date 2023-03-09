@@ -13,8 +13,10 @@ api = Api()
 
 cache = Cache(config={'CACHE_TYPE': 'simple', "CACHE_DEFAULT_TIMEOUT": 300})
 
-
 class DeleteAll(Resource):
+    """
+    This class is ONLY FOR TESTING
+    """
 
     def delete_and_commit(self, value):
         db.session.delete(value)
@@ -31,34 +33,37 @@ class DeleteAll(Resource):
 
 
 class UserItem(Resource):
-    def get(self, username, product):
-    
-        user = User.query.filter_by(name=username).first()
-        prod = Product.query.filter_by(name=product).first()
+    """
+    This class includes the information of an individual user. 
+    The class is accessed through api/users/<user>/.
+    Please refer to db.py for variables of the class and their nullability.
+    """
+
+    def get(self, user):
+        """
+        This view function fetches the information of the user. Individual
+        users are looked up through a particular product and a username. 
+        """
+        #print(user)
+        #user = User.query.filter_by(name=user).first()
+        #if not user:
+            #raise Conflict(description="User_name doesn't exist in db.")
+            
+        
         cached_user = cache.get("user_"+str(user.id))
         if cached_user:
             return cached_user
         
-
-        
-        if not prod:
-            raise Conflict(
-                description="This product doesn't exist in db."
-            )
-        
-        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
-            
-            raise Conflict(
-                description="User with this product doesn't exist in db."
-            )
-            
-        cache.set("username", user.serialize())    
+        cache.set("user_"+str(user.id), user.serialize())    
         return user.serialize()
-        #NOTE: if you do a successful get request once like this: api/Products/Fender Stratocaster/users/minni/,
-        #due to caching you will get the same result if you search with a wrong username.
-            
 
-    def put(self, username, product):
+    def put(self, user):
+        """
+        This function is used to modify the information of an existing user.
+        This function requires a valid JSON object with all class variables
+        and the structure is validated prior to modifying.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
@@ -67,22 +72,6 @@ class UserItem(Resource):
           
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
-        
-        user = User.query.filter_by(name=username).first()
-        prod = Product.query.filter_by(name=product).first()
-
-        
-        if not prod:
-            raise Conflict(
-                description="This product doesn't exist in db."
-            )
-        
-        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
-            
-            raise Conflict(
-                description="User with this product doesn't exist in db."
-            )
-
         
         user.deserialize(request.json)
         
@@ -94,7 +83,7 @@ class UserItem(Resource):
 
         except IntegrityError:
             raise Conflict(
-                description="User with name already exists."
+                description="Cannot modify username, since it has references in other tables."
             )
         except KeyError as e_v:
             raise BadRequest(description=str(e_v))
@@ -102,6 +91,10 @@ class UserItem(Resource):
         return Response(status=204)
 
     def delete(self, user):
+        """
+        This function deletes the user from the db.
+        """
+    
         db.session.delete(user)
         db.session.commit()
         cache.delete("users_all")
@@ -110,8 +103,18 @@ class UserItem(Resource):
 
 
 class UserCollection(Resource):
+    """
+    This class holds the requests for all user information. 
+    The class can be accessed through api/users/.
+    Through this class one can look up all users of the db and
+    create new users.
+    """
 
     def get(self):
+        """
+        This function fetches the information of all users in the db.
+        """
+    
         cached_users = cache.get("users_all")
         if cached_users:
             return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
@@ -131,6 +134,12 @@ class UserCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(users_json), status=200)
 
     def post(self):
+        """
+        This function is used to create new users for the db.
+        Please refer to db.py for the necessary variables. Prior to adding
+        the user, the JSON structure of the form is validated.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
@@ -154,6 +163,7 @@ class UserCollection(Resource):
             db.session.add(user)
             db.session.commit()
             cache.set("user_"+str(user.id), user.serialize())
+            
         except IntegrityError:
             raise Conflict(
                 description=f"User with name {request.json['name']} or email {request.json['email']} already exists"
@@ -166,18 +176,48 @@ class UserCollection(Resource):
         response.status_code = 201
         return response
 
-
 class ProductItem(Resource):
+    """
+    This class includes the requests regarding individual products.
+    The class can be accessed from api/users/<username>/products/<product>/.
+    The class can be used to getting the information of an individual
+    product, modify this information and delete a product from the db.
+    """
 
-    def get(self, product):
-        cached_product = cache.get("product_"+str(product.id))
+    def get(self, username, product):
+        """
+        This function fetches and returns the information of an individual 
+        product. 
+        """
+        
+        user = User.query.filter_by(name=username).first()
+        prod = Product.query.filter_by(name=product).first()
+        
+        cached_product = cache.get("product_"+str(prod.id))
         if cached_product:
             return cached_product
+        
+        if not prod:
+            raise Conflict(
+                description="This product doesn't exist in db."
+            )
+        
+        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
+            
+            raise Conflict(
+                description="User with this product doesn't exist in db."
+            )
 
-        cache.set("product_"+str(product.id), product.serialize())
-        return product.serialize()
+        cache.set("product_"+str(prod.id), prod.serialize())
+        return prod.serialize()
 
-    def put(self, product):
+    def put(self, username, product):
+        """
+        This function is used to modify an existing product in the db.
+        The function requires a valid JSON object, which is validated prior 
+        to modifying.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
@@ -187,17 +227,32 @@ class ProductItem(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
             
-        product.deserialize(request.json)
+        user = User.query.filter_by(name=username).first()
+        prod = Product.query.filter_by(name=product).first()
+        
+        if not prod:
+            raise Conflict(
+                description="This product doesn't exist in db."
+            )
+        
+        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
+            
+            raise Conflict(
+                description="User with this product doesn't exist in db."
+            )
 
-        user = None
-        if 'user_name' in request.json:
-            try:
-                user = User.query.filter_by(
-                    name=request.json['user_name']).first()
-                if user:
-                    product.user = user
-            except (IntegrityError, KeyError) as e_i:
-                raise BadRequest
+            
+        prod.deserialize(request.json)
+
+        #user = None
+        #if 'user_name' in request.json:
+            #try:
+                #user = User.query.filter_by(
+                    #name=request.json['user_name']).first()
+                #if user:
+                    #product.user = user
+            #except (IntegrityError, KeyError) as e_i:
+                #raise BadRequest
 
         categories = None
         if 'categories' in request.json:
@@ -213,9 +268,9 @@ class ProductItem(Resource):
 
            
         try:
-            db.session.add(product)
+            db.session.add(prod)
             db.session.commit()
-            cache.set("product_"+str(product.id), product.serialize())
+            cache.set("prod_"+str(prod.id), prod.serialize())
             cache.delete("products_all")
 
         except IntegrityError:
@@ -225,6 +280,10 @@ class ProductItem(Resource):
         return Response(status=204)
 
     def delete(self, product):
+        """
+        This function is used to delete a product from the db.
+        """
+    
         db.session.delete(product)
         db.session.commit()
         cache.delete("products_all")
@@ -233,8 +292,19 @@ class ProductItem(Resource):
 
 
 class ProductCollection(Resource):
+    """
+    This class holds the requests for all the products in the db.
+    The class can be accessed throuhg api/users/products/.
+    Through ProductCollection all product information can be found and
+    new products can be created.
+    """
 
     def get(self):
+        """
+        This function is used to fetch and return the information of all
+        products in the db.
+        """
+    
         cached_products = cache.get("products_all")
         if cached_products:
             return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_products), status=200)
@@ -255,11 +325,16 @@ class ProductCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(products_json), status=200)
 
     def post(self):
+        """
+        This function is used to create new products to the db. New product information
+        is expressed as a JSON object, which is validated prior to adding the product.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
         try:
-            validate(request.json, Product.json_schema(is_updating=False))
+            validate(request.json, Product.json_schema())
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
@@ -332,17 +407,27 @@ class ProductCollection(Resource):
        #     )
 
         response = make_response()
-        api_url = api.url_for(ProductItem, product=product)
+        api_url = api.url_for(ProductItem, username=user, product=product)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
 
 
 class ReviewItem(Resource):
+    """
+    This class holds the requests for individual reviews in the db.
+    The class can be accessed through api/users/<username>/reviews/<username>/.
+    """
 
-    def get(self, rev, product):
+    def get(self, username, product):
+        """
+        This function is used to fetch the information of a single review.
+        The function requires a product name and a username.
+        """
     
-        review = Review.query.filter_by(id=rev).first()
+        review = Review.query.filter_by(user_name=username).first()
+        if not review:
+            raise Conflict(description="No review to this product by this user.")
         prod = Product.query.filter_by(name=product).first()
         cached_review = cache.get("review_"+str(review.id))
         
@@ -354,7 +439,7 @@ class ReviewItem(Resource):
                 description="This product doesn't exist in db."
             )
             
-        if not Review.query.filter_by(id=rev).filter_by(product_name=product).first():
+        if not Review.query.filter_by(user_name=username).filter_by(product_name=product).first():
             raise Conflict(
                 description="This review doesn't exist in db."
             )
@@ -362,7 +447,13 @@ class ReviewItem(Resource):
         cache.set("review_"+str(review.id), review.serialize())
         return review.serialize()
 
-    def put(self, rev, product):
+    def put(self, username, product):
+        """
+        This function is used to modify the information of an individual review.
+        Modifying information should be in JSON form, which is validated prior to modifying.
+        Please refer to db.py for further information regarding the parameters.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
         try:
@@ -372,15 +463,15 @@ class ReviewItem(Resource):
             raise BadRequest(description=str(e_v))
             
         prod = Product.query.filter_by(name=product).first()
-        review = Review.query.filter_by(id=rev).first()
-        print (prod, review)
+        review = Review.query.filter_by(user_name=username).first()
+        #print (prod, review)
 
         if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
             )
             
-        if not Review.query.filter_by(id=rev).filter_by(product_name=product).first():
+        if not Review.query.filter_by(user_name=username).filter_by(product_name=product).first():
             raise Conflict(
                 description="This review doesn't exist in db."
             )
@@ -408,6 +499,10 @@ class ReviewItem(Resource):
         return Response(status=204)
 
     def delete(self, review):
+        """
+        This function is used to delete reviews from the db.
+        """
+    
         db.session.delete(review)
         db.session.commit()
         cache.delete("reviews_all")
@@ -416,8 +511,17 @@ class ReviewItem(Resource):
 
 
 class ReviewCollection(Resource):
+    """
+    This class includes the requests for all of the reviews in the db.
+    The class can be accessed through api/users/reviews/.
+    Through this class, one can get all reviews of the db and create new ones.
+    """
 
     def get(self):
+        """
+        This function is used to look up all reviews in the db.
+        """
+    
         cached_reviews = cache.get("reviews_all")
         if cached_reviews:
             return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_reviews), status=200)
@@ -438,11 +542,18 @@ class ReviewCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(reviews_json), status=200)
 
     def post(self):
+        """
+        This function is used to post new reviews in the db.
+        New review data should be in JSON form, which is validated prior to 
+        creating a product. Please refer to db.py for additional parameter information.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
         try:
             validate(request.json, Review.json_schema())
+            
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
@@ -474,15 +585,24 @@ class ReviewCollection(Resource):
         cache.delete("reviews_all")
 
         response = make_response()
-        api_url = api.url_for(ReviewItem, review=review)
+        api_url = api.url_for(ReviewItem, username=user, product=product)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
 
-
 class CategoryItem(Resource):
+    """
+    This class holds the requests of individual categories. The class
+    can be accessed through api/categories/<category:category>/.
+    Through this class one can get the information of a category, modify it and
+    delete it.
+    """
 
     def get(self, category):
+        """
+        This function is used to fetch the information of a single category.
+        """
+    
         cached_category = cache.get("category_"+str(category.id))
         if cached_category:
             return cached_category
@@ -491,6 +611,12 @@ class CategoryItem(Resource):
         return category.serialize()
 
     def put(self, category):
+        """
+        This function is used to modify an existing category. Data for 
+        modification should be provided in the form of a JSON object.
+        Please refer to db.py for further parameter information.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
@@ -520,6 +646,10 @@ class CategoryItem(Resource):
         return Response(status=204)
 
     def delete(self, category):
+        """
+        This function can be used to delete a category.
+        """
+    
         db.session.delete(category)
         db.session.commit()
         cache.delete("categories_all")
@@ -528,8 +658,18 @@ class CategoryItem(Resource):
 
 
 class CategoryCollection(Resource):
+    """
+    This class includes the requests for all categories. This class can be 
+    accessed through api/categories. Through this class one can 
+    get the information of all categories in the db and create new
+    categories.
+    """
 
     def get(self):
+        """
+        This function is used to fetch the information of all categories.
+        """
+    
         cached_categories = cache.get("categories_all")
         if cached_categories:
             return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_categories), status=200)
@@ -546,6 +686,12 @@ class CategoryCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(category_json), status=200)
 
     def post(self):
+        """
+        This function is used to create new categories. The data for the new
+        category should be provided as a JSON object. Please refer to db.py for 
+        further parameter information.
+        """
+    
         if not request.json:
             raise UnsupportedMediaType
 
@@ -592,14 +738,17 @@ class CategoryCollection(Resource):
 # Routing resources
 
 
-api.add_resource(UserItem, "/api/products/<product>/users/<username>/")
-api.add_resource(UserCollection, "/api/products/users/")
+api.add_resource(UserItem, "/api/users/<user:user>/")
+api.add_resource(UserCollection, "/api/users/")
 
-api.add_resource(ProductItem, "/api/products/<product:product>/")
-api.add_resource(ProductCollection, "/api/products/")
+api.add_resource(ProductItem, "/api/users/<username>/products/<product>/")
+api.add_resource(ProductCollection, 
+    "/api/users/products/",
+    "/api/categories/products/"
+)
 
-api.add_resource(ReviewItem, "/api/products/<product>/reviews/<rev>/")
-api.add_resource(ReviewCollection, "/api/products/reviews/")
+api.add_resource(ReviewItem, "/api/users/<username>/reviews/<product>/")
+api.add_resource(ReviewCollection, "/api/users/reviews/")
 
 api.add_resource(CategoryItem, "/api/categories/<category:category>/")
 api.add_resource(CategoryCollection, "/api/categories/")
