@@ -46,6 +46,15 @@ Run the tests.
 ```bash
 python ut.py
 ```
+
+Alternatively, run pytest.
+```bash
+pytest
+```
+For verbose logging use the `-vv` flag
+```bash
+pytest -vv
+```
 **Usage examples:**
 ```bash
 # Create an user called "johndoe"
