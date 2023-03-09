@@ -38,16 +38,23 @@ def test_get_all_users_empty_endpoint(app):
         assert_get_request(c, '/api/users/', [], 200)
 
 # POST USER
+minimal_user_info = {
+    "email": "test42@test.com",
+    "name": "kalamies",
+    "password": "123456",
+    "role": "Customer"
+}
 
+full_user_info = {
+    "email": "test42@test.com",
+    "name": "kalamies",
+    "password": "123456",
+    "role": "Customer",
+    "avatar": "https://www.google.com/"
+}
 
 def test_successful_add_user_minimal(app):
     with app.test_client() as c:
-        minimal_user_info = {
-            "email": "test42@test.com",
-            "username": "kalamies",
-            "password": "123456",
-            "role": "Customer"
-        }
         assert_post_request(
             client=c,
             url='/api/users/',
@@ -56,22 +63,14 @@ def test_successful_add_user_minimal(app):
             json_body=minimal_user_info
         )
 
-        minimal_user_info["products"] = []
-        minimal_user_info["reviews"] = []
-        minimal_user_info["avatar"] = None
+        local_info = {**minimal_user_info}
+        local_info["avatar"] = None
 
-        assert_get_request(c, '/api/users/', [minimal_user_info], 200)
+        assert_get_request(c, '/api/users/', [local_info], 200)
 
 
 def test_add_user_full_successful(app):
     with app.test_client() as c:
-        full_user_info = {
-            "email": "test42@test.com",
-            "username": "kalamies",
-            "password": "123456",
-            "role": "Customer",
-            "avatar": "https://www.google.com/"
-        }
 
         assert_post_request(
             client=c,
@@ -81,8 +80,6 @@ def test_add_user_full_successful(app):
             json_body=full_user_info
         )
 
-        full_user_info["products"] = []
-        full_user_info["reviews"] = []
         assert_get_request(c, '/api/users/', [full_user_info], 200)
 
 
@@ -90,7 +87,7 @@ def test_add_user_full_unsuccessful_avatar(app):
     with app.test_client() as c:
         full_user_info = {
             "email": "test42@test.com",
-            "username": "kalamies",
+            "name": "kalamies",
             "password": "123456",
             "role": "Customer",
             "avatar": "test.jpg"
@@ -104,7 +101,7 @@ def test_add_user_full_unsuccessful_avatar(app):
 #     with app.test_client() as c:
 #         full_user_info = {
 #             "email": "test42",
-#             "username": "kalamies",
+#             "name": "kalamies",
 #             "password": "123456",
 #             "role": "Customer",
 #             "avatar": "https://www.google.com/"
@@ -118,26 +115,19 @@ def test_add_and_get_single_user_endpoint(app):
     with app.test_client() as c:
         assert_get_request(c, '/api/users/', [], 200)
 
-        full_user_info = {
-            "email": "test42@test.com",
-            "username": "palomies",
-            "password": "654321",
-            "role": "Seller",
-            "avatar": "https://www.google.com/"
-        }
-
         assert_post_request(
             client=c,
             url='/api/users/',
-            expected_location_header="/api/users/palomies/",
+            expected_location_header="/api/users/kalamies/",
             expected_response_status=201,
             json_body=full_user_info
         )
 
-        full_user_info["id"] = 1
-        full_user_info["products"] = []
-        full_user_info["reviews"] = []
-        assert_get_request(c, '/api/users/palomies/', full_user_info, 200)
+        local_info = {**full_user_info}
+        local_info["id"] = 1
+        local_info["products"] = []
+        local_info["reviews"] = []
+        assert_get_request(c, '/api/users/kalamies/', local_info, 200)
 
 
 def test_add_multiple_and_get_all_users_endpoint(app):
@@ -146,7 +136,7 @@ def test_add_multiple_and_get_all_users_endpoint(app):
 
         full_user_info_1 = {
             "email": "test42@test.com",
-            "username": "palomies",
+            "name": "palomies",
             "password": "654321",
             "role": "Seller",
             "avatar": "https://www.google.com/"
@@ -154,7 +144,7 @@ def test_add_multiple_and_get_all_users_endpoint(app):
 
         full_user_info_2 = {
             "email": "test1234@test.com",
-            "username": "kalamies",
+            "name": "kalamies",
             "password": "654321",
             "role": "Customer",
             "avatar": "https://www.google.com/"
@@ -176,8 +166,6 @@ def test_add_multiple_and_get_all_users_endpoint(app):
             json_body=full_user_info_2
         )
 
-        full_user_info_1["products"] = full_user_info_2["products"] = []
-        full_user_info_1["reviews"] = full_user_info_2["reviews"] = []
         assert_get_request(
             c, '/api/users/', [full_user_info_1, full_user_info_2], 200)
 
@@ -188,7 +176,7 @@ def test_update_user_full_successful(app):
     with app.test_client() as c:
         full_user_info = {
             "email": "test42@test.com",
-            "username": "kalamies",
+            "name": "kalamies",
             "password": "123456",
             "role": "Customer",
             "avatar": "https://www.google.com/"
@@ -198,21 +186,19 @@ def test_update_user_full_successful(app):
 
         updated_full_user_info = {
             "email": "test423@test.com",
-            "username": "kalamies2",
+            "name": "kalamies2",
             "password": "1234561",
             "role": "Seller",
             "avatar": "https://www.google2.com/"
         }
         response_put = c.put(
-            '/api/users/' + full_user_info['username'] + "/", json=updated_full_user_info)
+            '/api/users/' + full_user_info['name'] + "/", json=updated_full_user_info)
 
         assert response.status_code == 201
         assert response.headers['location'] == "/api/users/kalamies/"
 
         assert response_put.status_code == 204
 
-        updated_full_user_info["products"] = []
-        updated_full_user_info["reviews"] = []
         assert_get_request(c, '/api/users/', [updated_full_user_info], 200)
 
 
@@ -220,7 +206,7 @@ def test_update_user_full_unsuccessful_email(app):
     with app.test_client() as c:
         full_user_info = {
             "email": "test42@test.com",
-            "username": "kalamies",
+            "name": "kalamies",
             "password": "123456",
             "role": "Customer",
             "avatar": "https://www.google.com/"
@@ -230,21 +216,19 @@ def test_update_user_full_unsuccessful_email(app):
 
         updated_full_user_info = {
             "email": "test423@test.com",
-            "username": "kalamies2",
+            "name": "kalamies2",
             "password": "1234561",
             "role": "Seller",
             "avatar": "test.jpg"
         }
         response_put = c.put(
-            '/api/users/' + full_user_info['username'] + "/", json=updated_full_user_info)
+            '/api/users/' + full_user_info['name'] + "/", json=updated_full_user_info)
 
         assert response.status_code == 201
         assert response.headers['location'] == "/api/users/kalamies/"
 
         assert response_put.status_code == 400
 
-        full_user_info["products"] = []
-        full_user_info["reviews"] = []
         assert_get_request(c, '/api/users/', [full_user_info], 200)
 
 # DELETE USER
@@ -254,7 +238,7 @@ def test_delete_user_full(app):
     with app.test_client() as c:
         full_user_info = {
             "email": "test42@test.com",
-            "username": "kalamies",
+            "name": "kalamies",
             "password": "123456",
             "role": "Customer",
             "avatar": "https://www.google.com/"
@@ -263,7 +247,7 @@ def test_delete_user_full(app):
         response = c.post('/api/users/', json=full_user_info)
 
         response_delete = c.delete(
-            '/api/users/' + full_user_info['username'] + "/")
+            '/api/users/' + full_user_info['name'] + "/")
 
         assert response.status_code == 201
         assert response.headers['location'] == "/api/users/kalamies/"
@@ -276,7 +260,7 @@ def test_delete_user_full(app):
 # PRODUCT TESTS
 dummy_user_info = {
     "email": "test42@test.com",
-    "username": "kalamies",
+    "name": "kalamies",
     "password": "123456",
     "role": "Customer",
     "avatar": "https://www.google.com/"
@@ -290,7 +274,7 @@ dummy_category_info = {
 minimal_product_info = {
     "name": "test_product",
     "price": 5.3,
-    "user_id": 1
+    "user_name": "kalamies"
 }
 
 minimal_product_info_response = {
@@ -304,7 +288,7 @@ minimal_product_info_response = {
 full_product_info = {
     "name": "test_product",
     "price": 5.3,
-    "user_id": 1,
+    "user_name": "kalamies",
     "images": ["https://www.google.com/", "https://www.google.com/"],
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
@@ -319,7 +303,7 @@ full_product_info = {
 full_product_info_2 = {
     "name": "test_product2",
     "price": 5.3,
-    "user_id": 1,
+    "user_name": "kalamies",
     "images": ["https://www.google.com/", "https://www.google.com/"],
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
@@ -353,7 +337,7 @@ updated_full_product_info_bad_user = {
     "name": "test_product_updated",
     "price": 6.4,
     "images": ["https://www.yahoo.com/"],
-    "user_id": 5,
+    "user_name": "notkalamies",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
 
@@ -468,7 +452,7 @@ def test_add_and_get_single_product_endpoint(app):
         local_info["id"] = 1
         local_info["categories"] = [{"id": 1, **dummy_category_info}]
         local_info["reviews"] = []
-        local_info.pop("user_id")
+        local_info.pop("user_name")
 
         assert_get_request(c, '/api/products/test_product/', local_info, 200)
 
@@ -555,7 +539,7 @@ def test_update_product_full_successful(app):
         updated_local_info = {**updated_full_product_info}
         updated_local_info["id"] = 1
         updated_local_info["reviews"] = []
-        updated_local_info["user_id"] = 1
+        updated_local_info["user_name"] = dummy_user_info["name"]
         updated_local_info["categories"] = [{"id": 1, **dummy_category_info}]
         assert_get_request(c, '/api/products/', [updated_local_info], 200)
 
@@ -602,38 +586,38 @@ def test_delete_product_full(app):
 # REVIEW TESTS
 minimal_review_info = {
     "rating": 2.5,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
 }
 
 minimal_review_info_below_lowest_threshold = {
     "rating": 0.9,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
 }
 
 minimal_review_info_lowest_threshold = {
     "rating": 1,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
 }
 
 minimal_review_info_highest_threshold = {
     "rating": 10,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
 }
 
 minimal_review_info_above_highest_threshold = {
     "rating": 10.1,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
 }
 
 full_review_info = {
     "rating": 2.5,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
 
@@ -645,8 +629,8 @@ full_review_info = {
 
 full_review_info_2 = {
     "rating": 8.5,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
 
@@ -658,8 +642,8 @@ full_review_info_2 = {
 
 full_review_info_bad_rating = {
     "rating": 12.5,
-    "user_id": 1,
-    "product_id": 1,
+    "user_name": "kalamies",
+    "product_name": "test_product",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
 
@@ -671,8 +655,8 @@ full_review_info_bad_rating = {
 
 full_review_info_bad_user = {
     "rating": 2.5,
-    "user_id": 5,
-    "product_id": 1,
+    "user_name": "notkalamies",
+    "product_name": "test_product",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
 
@@ -684,8 +668,8 @@ full_review_info_bad_user = {
 
 full_review_info_bad_product = {
     "rating": 2.5,
-    "user_id": 1,
-    "product_id": 2,
+    "user_name": "kalamies",
+    "product_name": "nonexistent_product",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
 
@@ -706,11 +690,11 @@ updated_full_review_info = {
 }
 
 updated_full_review_info_fail_user = {
-    "user_id": 1
+    "user_name": "kalamies",
 }
 
 updated_full_review_info_fail_product = {
-    "product_id": 1
+    "product_name": "test_product",
 }
 
 # GET ALL REVIEWs
@@ -833,8 +817,8 @@ def test_add_and_get_single_review_endpoint(app):
         local_info["id"] = 1
         local_info["user"] = {"id": 1, **dummy_user_info}
         local_info["product"] = minimal_product_info_response
-        local_info.pop("user_id")
-        local_info.pop("product_id")
+        local_info.pop("user_name")
+        local_info.pop("product_name")
 
         assert_get_request(c, '/api/reviews/1/', local_info, 200)
 
@@ -894,8 +878,8 @@ def test_update_review_successful(app):
 
         updated_local_info = {**updated_full_review_info}
         updated_local_info["id"] = 1
-        updated_local_info["user_id"] = 1
-        updated_local_info["product_id"] = 1
+        updated_local_info["user_name"] = dummy_user_info["name"]
+        updated_local_info["product_name"] = minimal_product_info["name"]
         assert_get_request(c, '/api/reviews/', [updated_local_info], 200)
 
 
@@ -1076,7 +1060,7 @@ def test_add_and_get_single_category_endpoint(app):
         local_info["id"] = 1
         local_product_info = {**minimal_product_info,
                               "description": None, "images": None, "id": 1}
-        local_product_info.pop("user_id")
+        local_product_info.pop("user_name")
         local_info["products"] = [local_product_info]
         local_info.pop("product_names")
 

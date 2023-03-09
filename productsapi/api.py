@@ -147,7 +147,7 @@ class ProductItem(Resource):
             product.deserialize(request.json)
 
             user = None
-            if 'name' in request.json:
+            if 'user_name' in request.json:
                 try:
                     user = User.query.filter_by(
                         name=request.json['user_name']).first()
@@ -207,7 +207,7 @@ class ProductCollection(Resource):
                 'price': product.price,
                 'description': product.description,
                 'images': json.loads(product.images) if product.images else None,
-                'user_id': product.user_id,
+                'user_name': product.user_name,
                 'reviews': [review.serialize(include_product=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
@@ -314,11 +314,11 @@ class ReviewItem(Resource):
         try:
             review.deserialize(request.json)
 
-            if 'user_id' in request.json:
-                raise BadRequest(description="Cannot update user id")
+            if 'user_name' in request.json:
+                raise BadRequest(description="Cannot update user name")
 
-            if 'product_id' in request.json:
-                raise BadRequest(description="Cannot update product id")
+            if 'product_name' in request.json:
+                raise BadRequest(description="Cannot update product name")
 
             review.deserialize(request.json)
 

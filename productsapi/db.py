@@ -156,9 +156,11 @@ class Review(db.Model):
 
         if include_user:
             serialized_review['user'] = self.user.serialize(long=False)
+            serialized_review.pop("user_name")
 
         if include_product:
             serialized_review['product'] = self.product.serialize(long=False)
+            serialized_review.pop("product_name")
 
         return serialized_review
 
