@@ -46,7 +46,7 @@ prod_data = {
     "price": 19.89,
     "description": "Perus juusto-chili",
     #"images": "https://www.google.com/",
-    "user_id": 2
+    "user_name": "pekka"
   
 }
 
@@ -55,7 +55,7 @@ put_prod_data = {
     "name": "Makkara",
     "price": 15.15,
     "description": "Perus juusto-chili",
-    "user_id": 3
+    "user_name": "matti"
 }
 
 
@@ -63,8 +63,8 @@ review_api_url = 'http://localhost:5000/api/reviews/'
 review_data = {
     "description": "ihan hyvaa makkaraa, sopivan tulista.",
     "rating": 5,
-    "user_id": 1,
-    "product_id": 5
+    "user_name": "pekka",
+    "product_name": "Makkara"
 }
 
 categories_api_url = 'http://localhost:5000/api/categories/'
