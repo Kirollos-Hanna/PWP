@@ -81,13 +81,13 @@ class UserCollection(Resource):
         users_json = []
         for user in users:
             users_json.append({
-                'username': user.username,
+                'name': user.name,
                 'password': user.password,
                 'email': user.email,
                 'role': user.role,
                 'avatar': user.avatar,
-                'products': [product.serialize() for product in user.products],
-                'reviews': [review.serialize() for review in user.reviews]
+                #'products': [product.serialize() for product in user.products],
+                #'reviews': [review.serialize() for review in user.reviews]
             })
         cache.set("users_all", users_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(users_json), status=200)
@@ -103,7 +103,7 @@ class UserCollection(Resource):
 
         try:
             user = User(
-                username=request.json['username'],
+                name=request.json['name'],
                 password=request.json['password'],
                 email=request.json['email'],
                 role=request.json['role'] if 'role' in request.json else "Customer",
@@ -118,7 +118,7 @@ class UserCollection(Resource):
             cache.set("user_"+str(user.id), user.serialize())
         except IntegrityError:
             raise Conflict(
-                description=f"User with name {request.json['username']} or email {request.json['email']} already exists"
+                description=f"User with name {request.json['name']} or email {request.json['email']} already exists"
             )
         cache.delete("users_all")
 
@@ -147,10 +147,10 @@ class ProductItem(Resource):
             product.deserialize(request.json)
 
             user = None
-            if 'user_id' in request.json:
+            if 'name' in request.json:
                 try:
                     user = User.query.filter_by(
-                        id=request.json['user_id']).first()
+                        name=request.json['user_name']).first()
                     if user:
                         product.user = user
                 except (IntegrityError, KeyError) as e_i:
@@ -225,7 +225,7 @@ class ProductCollection(Resource):
 
         try:
             user = User.query.filter_by(
-                id=request.json['user_id']).first()
+                name=request.json['user_name']).first()
         except (IntegrityError, KeyError) as e_i:
             raise Conflict(
                 description="User not found in the db"
@@ -311,19 +311,26 @@ class ReviewItem(Resource):
     def put(self, review):
         if not request.json:
             raise UnsupportedMediaType
+        try:
+            review.deserialize(request.json)
 
-        if 'user_id' in request.json:
-            raise BadRequest(description="Cannot update user id")
+            if 'user_id' in request.json:
+                raise BadRequest(description="Cannot update user id")
 
-        if 'product_id' in request.json:
-            raise BadRequest(description="Cannot update product id")
+            if 'product_id' in request.json:
+                raise BadRequest(description="Cannot update product id")
 
-        review.deserialize(request.json)
+            review.deserialize(request.json)
 
-        db.session.add(review)
-        db.session.commit()
-        cache.set("review_"+str(review.id), review.serialize())
-        cache.delete("reviews_all")
+            db.session.add(review)
+            db.session.commit()
+            cache.set("review_"+str(review.id), review.serialize())
+            cache.delete("reviews_all")
+            
+        except IntegrityError:
+            raise Conflict(
+                description="Product_name or user_name doesn't exist in db."
+            )
 
         return Response(status=204)
 
@@ -349,8 +356,10 @@ class ReviewCollection(Resource):
                 'id': review.id,
                 'description': review.description,
                 'rating': review.rating,
-                'user_id': review.user_id,
-                'product_id': review.product.id,
+                'user_name': review.user_name,
+                'product_name': review.product_name,
+                #'user': review.user.serialize(),
+                #'product': review.product.serialize(),
             })
         cache.set("reviews_all", reviews_json)
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(reviews_json), status=200)
@@ -366,9 +375,9 @@ class ReviewCollection(Resource):
 
         try:
             user = User.query.filter_by(
-                id=request.json['user_id']).first()
+                name=request.json['user_name']).first()
             product = Product.query.filter_by(
-                id=request.json['product_id']).first()
+                name=request.json['product_name']).first()
             if user is None or product is None:
                 return Response("User or product not found in the db", status=409)
         except IntegrityError as e_v:

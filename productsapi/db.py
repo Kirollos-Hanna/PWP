@@ -22,7 +22,7 @@ class RoleType(str, enum.Enum):
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    username = db.Column(db.String(256), nullable=False, unique=True)
+    name = db.Column(db.String(256), nullable=False, unique=True)
     password = db.Column(db.String(256), nullable=False)
     email = db.Column(db.String(256), nullable=False, unique=True)
     role = db.Column(db.Enum(RoleType), nullable=False)
@@ -35,10 +35,10 @@ class User(db.Model):
     def json_schema():
         schema = {
             "type": "object",
-            "required": ["username", "role", "password", "email"]
+            "required": ["name", "role", "password", "email"]
         }
         props = schema["properties"] = {}
-        props["username"] = {
+        props["name"] = {
             "description": "The user's name",
             "type": "string",
             "minLength": 1,
@@ -76,7 +76,7 @@ class User(db.Model):
     def serialize(self, long=True):
         serialized_user = {
             'id': self.id,
-            'username': self.username,
+            'name': self.name,
             'password': self.password,
             'email': self.email,
             'role': self.role,
@@ -92,13 +92,13 @@ class User(db.Model):
         return serialized_user
 
     def deserialize(self, doc):
-        self.username = doc['username'] if 'username' in doc else self.username
+        self.name = doc['name'] if 'name' in doc else self.name
         self.password = doc['password'] if 'password' in doc else self.password
         self.email = doc['email'] if 'email' in doc else self.email
         self.role = doc['role'] if 'role' in doc else self.role
         self.avatar = doc['avatar'] if 'avatar' in doc else self.avatar
-        self.products = doc['products'] if 'products' in doc else self.products
-        self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
+        #self.products = doc['products'] if 'products' in doc else self.products
+        #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
 
 
 class Review(db.Model):
@@ -106,9 +106,9 @@ class Review(db.Model):
     description = db.Column(db.String(65535), nullable=True)
     rating = db.Column(db.Float, nullable=False)
 
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey(
-        "product.id"), nullable=False)
+    user_name = db.Column(db.String(256), db.ForeignKey("user.name"), nullable=False)
+    product_name = db.Column(db.String(256), db.ForeignKey(
+        "product.name"), nullable=False)
 
     user = db.relationship("User", back_populates="reviews")
     product = db.relationship("Product", back_populates="reviews")
@@ -117,7 +117,7 @@ class Review(db.Model):
     def json_schema():
         schema = {
             "type": "object",
-            "required": ["rating", "product_id", "user_id"]
+            "required": ["rating", "product_name", "user_name"]
         }
 
         props = schema["properties"] = {}
@@ -129,16 +129,16 @@ class Review(db.Model):
             "maximum": 10,
         }
 
-        props["user_id"] = {
-            "description": "The user id of the reviewer",
-            "type": "integer",
+        props["user_name"] = {
+            "description": "The username of the reviewer",
+            "type": "string",
             "minLength": 1,
             "maxLength": 256
         }
 
-        props["product_id"] = {
-            "description": "The product id being reviewed",
-            "type": "integer",
+        props["product_name"] = {
+            "description": "The product name being reviewed",
+            "type": "string",
             "minLength": 1,
             "maxLength": 256
         }
@@ -148,8 +148,10 @@ class Review(db.Model):
     def serialize(self, include_product=True, include_user=True):
         serialized_review = {
             'id': self.id,
+            'user_name': self.user_name,
             'description': self.description,
             'rating': self.rating,
+            'product_name': self.product_name
         }
 
         if include_user:
@@ -164,8 +166,8 @@ class Review(db.Model):
         self.id = doc['id'] if 'id' in doc else self.id
         self.rating = doc['rating'] if 'rating' in doc else self.rating
         self.description = doc['description'] if 'description' in doc else self.description
-        self.user_id = doc['user_id'] if 'user_id' in doc else self.user_id
-        self.product = doc['product'] if 'product' in doc else self.product
+        self.user_name = doc['user_name'] if 'user_name' in doc else self.user_name
+        self.product_name = doc['product_name'] if 'product_name' in doc else self.product_name
 
 
 class Product(db.Model):
@@ -174,7 +176,8 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(65535), nullable=True)
     images = db.Column(db.String(65535), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_name = db.Column(db.String(256), db.ForeignKey("user.name"), nullable=False)
+    #user_name = db.Column(db.String(256), nullable=False)
 
     user = db.relationship("User", back_populates="products")
     reviews = db.relationship("Review", back_populates="product")
@@ -185,7 +188,7 @@ class Product(db.Model):
     def json_schema(is_updating):
         schema = {
             "type": "object",
-            "required": ["name", "price", "user_id"]
+            "required": ["name", "price", "user_name"]
         }
 
         if is_updating:
@@ -195,9 +198,9 @@ class Product(db.Model):
 
         props = schema["properties"] = {}
 
-        props["user_id"] = {
+        props["user_name"] = {
             "description": "The user id of the user who created this product",
-            "type": "integer",
+            "type": "string",
             "minLength": 1,
             "maxLength": 256
         }
@@ -272,7 +275,9 @@ class Product(db.Model):
         self.price = doc['price'] if 'price' in doc else self.price
         self.description = doc['description'] if 'description' in doc else self.description
         self.images = json.dumps(doc['images']) if 'images' in doc else self.images
-        self.user_id = doc['user_id'] if 'user_id' in doc else self.user_id
+        self.user_name = doc['user_name'] if 'user_name' in doc else self.user_name
+        #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
+        #self.categories = doc['categories'] if 'categories' in doc else self.categories
 
 
 class Category(db.Model):
@@ -304,7 +309,7 @@ class Category(db.Model):
         }
         props["image"] = {
             "description": "A url for an image related to the category",
-            "type": "string",
+            "type": ["string", "null"],
             "format": "uri",
             "pattern": "^https?://",
             "minLength": 1,
