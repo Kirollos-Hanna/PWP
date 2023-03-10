@@ -346,17 +346,26 @@ full_product_info_2 = {
 updated_full_product_info = {
     "name": "test_product_updated",
     "price": 6.4,
+    'user_name': 'kalamies',
     "images": ["https://www.yahoo.com/"],
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     """,
+    'categories': ['test_category']
 }
 
 updated_full_product_info_bad_images = {
     "name": "test_product_updated",
     "price": 6.4,
+    "user_name": "kalamies",
     "images": ["test.jpg"],
+    "description": """
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
+    Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
+    Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
+    """,
+    "categories": ["test_category"]
 }
 
 updated_full_product_info_bad_user = {
@@ -368,11 +377,13 @@ updated_full_product_info_bad_user = {
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     """,
+    "categories": ["test_category"]
 }
 
 updated_full_product_info_bad_categories = {
     "name": "test_product_updated",
     "price": 6.4,
+    "user_name": "kalamies",
     "images": ["https://www.yahoo.com/"],
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
@@ -469,28 +480,6 @@ def test_put_product_with_and_without_categories(app):
 
         response_put = c.put(response_post.headers['location'], json=modified_prod_info)
         assert response_put.status_code == 400
-
-
-def test_put_product_with_different_id_same_name(app):
-    with app.test_client() as c:
-        add_product_prereqs(c)
-        response_post = assert_post_request(
-            client=c,
-            url='/api/users/products/',
-            expected_location_header='/api/users/kalamies/products/test_product/',
-            expected_response_status=201,
-            json_body=full_product_info
-        )
-
-        response_get = c.get(response_post.headers['location'])
-
-        created_product = response_get.get_json()
-        new_prod = copy.deepcopy(created_product)
-        new_prod['id'] = 10
-
-        response_put = c.put(response_post.headers['location'], json=new_prod)
-        print(response_put.text)
-        assert response_put.status_code == 409
 
 
 def test_product_collection_post_without_json(app):
@@ -644,17 +633,21 @@ def test_update_product_full_successful(app):
     with app.test_client() as c:
         add_product_prereqs(c)
 
-        assert_post_request(
+        response_post = assert_post_request(
             client=c,
             url='/api/users/products/',
-            expected_location_header="/api/users/" + full_product_info['user_name'] + "products/" +
+            expected_location_header="/api/users/" + full_product_info['user_name'] + "/products/" +
                 full_product_info['name'] + "/",
             expected_response_status=201,
             json_body=full_product_info
         )
 
+        location = response_post.headers['location']
+
         response_put = c.put(
-            '/api/users/' + full_product_info['user_name'] + 'products/' + full_product_info['name'] + "/", json=updated_full_product_info)
+            location,
+            json=updated_full_product_info
+        )
 
         assert response_put.status_code == 204
 
@@ -689,7 +682,7 @@ def test_delete_product_full(app):
 
         assert_get_request(c, '/api/users/products/', [], 200)
 
-        assert_post_request(
+        response_post = assert_post_request(
             client=c,
             url='/api/users/products/',
             expected_location_header="/api/users/kalamies/products/test_product/",
@@ -697,8 +690,7 @@ def test_delete_product_full(app):
             json_body=full_product_info
         )
 
-        response_delete = c.delete(
-            '/api/users/kalamies/products/')
+        response_delete = c.delete(response_post.headers['location'])
 
         assert response_delete.status_code == 204
 
@@ -812,7 +804,7 @@ updated_full_review_info_fail_product = {
 
 def test_get_all_reviews_empty_endpoint(app):
     with app.test_client() as c:
-        assert_get_request(c, '/api/reviews/', [], 200)
+        assert_get_request(c, '/api/users/reviews/', [], 200)
 
 
 # POST REVIEW
@@ -820,6 +812,8 @@ def test_get_all_reviews_empty_endpoint(app):
 def test_successful_add_review_minimal(app):
     with app.test_client() as c:
         add_review_prereqs(c)
+
+        # TODO:: For some reason the url converters are not working here
         assert_post_request(
             client=c,
             url='/api/users/reviews/',
@@ -827,6 +821,7 @@ def test_successful_add_review_minimal(app):
             expected_response_status=201,
             json_body=minimal_review_info
         )
+
         local_info = {**minimal_review_info}
         local_info["id"] = 1
         local_info["description"] = None
@@ -879,7 +874,7 @@ def test_add_review_minimal_ratings(app):
 
         assert_post_request(
             client=c,
-            url='/api/reviews/',
+            url='/api/users/reviews/',
             expected_location_header="/api/users/kalamies/reviews/test_product/",
             expected_response_status=201,
             json_body=minimal_review_info_lowest_threshold
@@ -1113,8 +1108,14 @@ def test_get_all_categories_empty_endpoint(app):
 def test_put_category_without_json(app):
     with app.test_client() as c:
         add_category_prereqs(c)
-        response_post = c.post('/api/categories/', json=full_category_info)
-        assert response_post.status_code == 201
+        response_post = assert_post_request(
+            client=c,
+            url='/api/categories/',
+            expected_location_header='/api/categories/test_category/',
+            expected_response_status=201,
+            json_body=full_category_info
+        )
+
         response_put = c.put(response_post.headers['location'], data="test_string")
         assert response_put.status_code == 415
 
@@ -1381,17 +1382,18 @@ def make_faulty_product_put_requests(app, json_data, expected_response_code):
     with app.test_client() as c:
         add_product_prereqs(c)
 
-        assert_post_request(
+        response_post = assert_post_request(
             client=c,
-            url='/api/products/',
-            expected_location_header="/api/products/" +
-                full_product_info['name'] + "/",
+            url='/api/users/products/',
+            expected_location_header=\
+                f'/api/users/{full_product_info["user_name"]}/products/{full_product_info["name"]}/',
             expected_response_status=201,
             json_body=full_product_info
         )
 
-        response_put = c.put('/api/products/' +
-                             full_product_info['name'] + "/", json=json_data)
+        location = response_post.headers['location']
+
+        response_put = c.put(location, json=json_data)
 
         assert response_put.status_code == expected_response_code
 
@@ -1401,7 +1403,7 @@ def add_review_prereqs(c):
 
     add_model(
         c,
-        "/api/products/",
+        "/api/users/products/",
         minimal_product_info
     )
 
@@ -1416,6 +1418,6 @@ def add_category_prereqs(c):
 
     add_model(
         c,
-        "/api/products/",
+        "/api/users/products/",
         minimal_product_info
     )

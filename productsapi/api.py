@@ -199,7 +199,7 @@ class ProductItem(Resource):
         The function requires a valid JSON object, which is validated prior 
         to modifying.
         """
-    
+
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
@@ -211,7 +211,7 @@ class ProductItem(Resource):
             
         user = User.query.filter_by(name=username).first()
         prod = Product.query.filter_by(name=product).first()
-        
+
         if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
@@ -259,18 +259,23 @@ class ProductItem(Resource):
             raise Conflict(
                 description="Product with name already exists."
             )
+
         return Response(status=204)
 
-    def delete(self, product):
+    def delete(self, username, product):
         """
         This function is used to delete a product from the db.
         """
-    
-        db.session.delete(product)
-        db.session.commit()
-        cache.delete("products_all")
 
-        return Response(status=204)
+        prod = Product.query.filter_by(name=product).first()
+    
+        if prod:
+            db.session.delete(prod)
+            db.session.commit()
+            cache.delete("products_all")
+
+            return Response(status=204)
+        return Response(status=404)
 
 
 class ProductCollection(Resource):
@@ -521,7 +526,11 @@ class ReviewCollection(Resource):
                 #'product': review.product.serialize(),
             })
         cache.set("reviews_all", reviews_json)
-        return Response(headers={"Content-Type": "application/json"}, response=json.dumps(reviews_json), status=200)
+        return Response(
+            headers={"Content-Type": "application/json"},
+            response=json.dumps(reviews_json),
+            status=200
+        )
 
     def post(self):
         """
@@ -704,7 +713,8 @@ class CategoryCollection(Resource):
             db.session.add(category)
             db.session.commit()
             cache.set("category_"+str(category.id), category.serialize())
-
+        except(IntegrityError) as e_i:
+            return Response("Category already exists", 409)
         except (ValueError, KeyError, IntegrityError) as e_v:
             return Response("Failed to parse request.json", 400)
 
