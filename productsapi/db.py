@@ -92,10 +92,10 @@ class User(db.Model):
         return serialized_user
 
     def deserialize(self, doc):
-        self.name = doc['name'] if 'name' in doc else self.name
-        self.password = doc['password'] if 'password' in doc else self.password
-        self.email = doc['email'] if 'email' in doc else self.email
-        self.role = doc['role'] if 'role' in doc else self.role
+        self.name = doc['name'] #if 'name' in doc else self.name
+        self.password = doc['password'] #if 'password' in doc else self.password
+        self.email = doc['email'] #if 'email' in doc else self.email
+        self.role = doc['role'] #if 'role' in doc else self.role
         self.avatar = doc['avatar'] if 'avatar' in doc else self.avatar
         #self.products = doc['products'] if 'products' in doc else self.products
         #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
@@ -189,21 +189,21 @@ class Product(db.Model):
         "Category", secondary=Product_categories, back_populates="products")
 
     @staticmethod
-    def json_schema(is_updating):
+    def json_schema():
         schema = {
             "type": "object",
             "required": ["name", "price", "user_name"]
         }
 
-        if is_updating:
-            schema = {
-                "type": "object",
-            }
+        #if is_updating:
+            #schema = {
+                #"type": "object",
+            #}
 
         props = schema["properties"] = {}
 
         props["user_name"] = {
-            "description": "The user id of the user who created this product",
+            "description": "The user name of the user who created this product",
             "type": "string",
             "minLength": 1,
             "maxLength": 256
@@ -299,10 +299,10 @@ class Category(db.Model):
             "required": ["name"]
         }
         
-        if is_updating:
-            schema = {
-                "type": "object",
-            }
+        #if is_updating:
+            #schema = {
+                #"type": "object",
+            #}
             
         props = schema["properties"] = {}
         props["name"] = {
