@@ -13,6 +13,7 @@ api = Api()
 
 cache = Cache(config={'CACHE_TYPE': 'simple', "CACHE_DEFAULT_TIMEOUT": 300})
 
+
 class UserItem(Resource):
     """
     This class includes the information of an individual user. 
@@ -48,7 +49,6 @@ class UserItem(Resource):
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
-        user.deserialize(request.json)
         try:
             validate(request.json, User.json_schema())
           
@@ -69,10 +69,6 @@ class UserItem(Resource):
             )
         except KeyError as e_v:
             raise BadRequest(description=str(e_v))
-        db.session.add(user)
-        db.session.commit()
-        cache.set("user_"+str(user.id), user.serialize())
-        cache.delete("users_all")
 
         return Response(status=204)
 
@@ -134,13 +130,16 @@ class UserCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        user = User(
-            name=request.json['name'],
-            password=request.json['password'],
-            email=request.json['email'],
-            role=request.json['role'] if 'role' in request.json else "Customer",
-            avatar=request.json['avatar'] if 'avatar' in request.json else None,
-        )
+        try:
+            user = User(
+                name=request.json['name'],
+                password=request.json['password'],
+                email=request.json['email'],
+                role=request.json['role'] if 'role' in request.json else "Customer",
+                avatar=request.json['avatar'] if 'avatar' in request.json else None,
+            )
+        except (ValueError, KeyError) as e_v:
+            return Response("Failed to parse request.json", 400)
 
         try:
             db.session.add(user)
@@ -243,7 +242,7 @@ class ProductItem(Resource):
                 categories = Category.query.filter(
                     Category.name.in_(request.json['categories'])).all()
                 if categories:
-                    product.categories = categories
+                    prod.categories = categories
                 else:
                     raise BadRequest
             except (IntegrityError, KeyError) as e_i:
@@ -321,13 +320,24 @@ class ProductCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        user = User.query.filter_by(
-            name=request.json['user_name']).first()
+        try:
+            user = User.query.filter_by(
+                name=request.json['user_name']).first()
+        except (IntegrityError, KeyError) as e_i:
+            raise Conflict(
+                description="User not found in the db"
+            )
 
         categories = None
         if 'categories' in request.json:
-            categories = Category.query.filter(
-                Category.name.in_(request.json['categories'])).all()
+            try:
+                categories = Category.query.filter(
+                    Category.name.in_(request.json['categories'])).all()
+            except (IntegrityError, KeyError) as e_i:
+                print(
+                    "No categories found in the db"
+                )
+                categories = None
 
         try:
             product = Product(
@@ -349,6 +359,8 @@ class ProductCollection(Resource):
             raise Conflict(
                 description=e_i
             )
+        except (ValueError, KeyError) as e_v:
+            return Response("Failed to parse request.json", 400)
 
         cache.delete("products_all")
        # NOTE:: CAN BE OF USE WHEN LINKING PRODUCTS TO CATEGORIES
@@ -375,9 +387,9 @@ class ProductCollection(Resource):
        #     raise Conflict(
        #         description=f'Failed to link product: {request.json["name"]} to category: {request.json["category"]}'
        #     )
-
+        
         response = make_response()
-        api_url = api.url_for(ProductItem, username=user, product=product)
+        api_url = api.url_for(ProductItem, username=user.name, product=product.name)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
@@ -454,13 +466,17 @@ class ReviewItem(Resource):
         #if 'product_name' in request.json:
             #raise BadRequest(description="Cannot update product name")
 
+        try:   
 
-        review.deserialize(request.json)
-
-        db.session.add(review)
-        db.session.commit()
-        cache.set("review_"+str(review.id), review.serialize())
-        cache.delete("reviews_all")
+            db.session.add(review)
+            db.session.commit()
+            cache.set("review_"+str(review.id), review.serialize())
+            cache.delete("reviews_all")
+            
+        except IntegrityError:
+            raise Conflict(
+                description="Product_name or user_name doesn't exist in db."
+            )
 
         return Response(status=204)
 
@@ -523,12 +539,17 @@ class ReviewCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        user = User.query.filter_by(
-            name=request.json['user_name']).first()
-        product = Product.query.filter_by(
-            name=request.json['product_name']).first()
-        if user is None or product is None:
+        try:
+            user = User.query.filter_by(
+                name=request.json['user_name']).first()
+            product = Product.query.filter_by(
+                name=request.json['product_name']).first()
+            if user is None or product is None:
+                return Response("User or product not found in the db", status=409)
+        except IntegrityError as e_v:
             return Response("User or product not found in the db", status=409)
+        except KeyError as e_k:
+            print("No username or product_name defined in response.json")
 
         try:
             review = Review(
@@ -589,12 +610,15 @@ class CategoryItem(Resource):
         category.deserialize(request.json)
 
         if 'product_names' in request.json:
-            products = Product.query.filter(
-                Product.name.in_(request.json['product_names'])).all()
-            if not products:
+            try:
+                products = Product.query.filter(
+                    Product.name.in_(request.json['product_names'])).all()
+                if not products:
+                    raise BadRequest(description="Product names do not exist")
+                else:
+                    category.products = products
+            except (IntegrityError, KeyError) as e_i:
                 raise BadRequest(description="Product names do not exist")
-            else:
-                category.products = products
 
         db.session.add(category)
         db.session.commit()
@@ -607,7 +631,6 @@ class CategoryItem(Resource):
         """
         This function can be used to delete a category.
         """
-    
         db.session.delete(category)
         db.session.commit()
         cache.delete("categories_all")
@@ -660,10 +683,16 @@ class CategoryCollection(Resource):
 
         products = None
         if 'product_names' in request.json:
-            products = Product.query.filter(
-                Product.name.in_(request.json['product_names'])).all()
-            if not products:
-                raise BadRequest(description="Product names do not exist")
+            try:
+                products = Product.query.filter(
+                    Product.name.in_(request.json['product_names'])).all()
+                if not products:
+                    raise BadRequest(description="Product names do not exist")
+            except (IntegrityError, KeyError) as e_i:
+                print(
+                    "No products found in the db"
+                )
+                products = None
 
         try:
             category = Category(
@@ -676,8 +705,8 @@ class CategoryCollection(Resource):
             db.session.commit()
             cache.set("category_"+str(category.id), category.serialize())
 
-        except (IntegrityError) as e_v:
-            return Response("Category already exists", 409)
+        except (ValueError, KeyError, IntegrityError) as e_v:
+            return Response("Failed to parse request.json", 400)
 
         cache.delete("categories_all")
 
