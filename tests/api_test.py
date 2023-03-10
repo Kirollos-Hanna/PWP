@@ -1,4 +1,5 @@
 import pytest
+import copy
 import tempfile
 import os
 from path import Path
@@ -55,7 +56,7 @@ full_user_info = {
 
 def test_successful_add_user_minimal(app):
     with app.test_client() as c:
-        assert_post_request(
+        response_post = assert_post_request(
             client=c,
             url='/api/users/',
             expected_location_header="/api/users/kalamies/",
@@ -67,6 +68,24 @@ def test_successful_add_user_minimal(app):
         local_info["avatar"] = None
 
         assert_get_request(c, '/api/users/', [local_info], 200)
+
+
+def test_post_existing_user(app):
+    with app.test_client() as c:
+        assert_post_request(
+            client=c,
+            url='/api/users/',
+            expected_location_header='/api/users/kalamies/',
+            expected_response_status=201,
+            json_body=minimal_user_info
+        )
+
+        assert_failed_post_request(
+            client=c,
+            url='/api/users/',
+            expected_response_status=409,
+            json_body=minimal_user_info
+        )
 
 
 def test_add_user_full_successful(app):
@@ -82,7 +101,6 @@ def test_add_user_full_successful(app):
 
         assert_get_request(c, '/api/users/', [full_user_info], 200)
 
-
 def test_add_user_full_unsuccessful_avatar(app):
     with app.test_client() as c:
         full_user_info = {
@@ -95,6 +113,11 @@ def test_add_user_full_unsuccessful_avatar(app):
 
         response = c.post('/api/users/', json=full_user_info)
         assert response.status_code == 400
+
+def test_post_user_collection_without_json(app):
+    with app.test_client() as c:
+        response = c.post('/api/users/', data="test_string")
+        assert response.status_code == 415
 
 # TODO
 # def test_add_user_full_unsuccessful_email(app):
@@ -171,6 +194,14 @@ def test_add_multiple_and_get_all_users_endpoint(app):
 
 # PUT USER
 
+def test_put_without_json(app):
+    with app.test_client() as c:
+        response_post = c.post('/api/users/', json=full_user_info)
+        url = '/api/users/' + full_user_info['name'] + '/'
+        response_put = c.put(url, data="test_string")
+
+        assert response_put.status_code == 415
+
 
 def test_update_user_full_successful(app):
     with app.test_client() as c:
@@ -203,6 +234,7 @@ def test_update_user_full_successful(app):
 
 
 def test_update_user_full_unsuccessful_email(app):
+
     with app.test_client() as c:
         full_user_info = {
             "email": "test42@test.com",
@@ -412,6 +444,86 @@ def test_successful_add_product_full(app):
         assert_get_request(c, '/api/products/', [local_info], 200)
 
 
+def test_put_product_with_and_without_categories(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+        response_post = assert_post_request(
+            client=c,
+            url='/api/products/',
+            expected_location_header='/api/products/test_product/',
+            expected_response_status=201,
+            json_body=minimal_product_info
+        )
+
+        modified_category_info = copy.deepcopy(minimal_category_info)
+        modified_category_info['name'] = 'another_category'
+        response_cat_post = assert_post_request(
+            client=c,
+            url='/api/categories/',
+            expected_location_header='/api/categories/another_category/',
+            expected_response_status=201,
+            json_body=modified_category_info
+        )
+
+        modified_prod_info = copy.deepcopy(minimal_product_info)
+        modified_prod_info['categories'] = ['another_category']
+
+        response_put = c.put(response_post.headers['location'], json=modified_prod_info)
+        assert response_put.status_code == 204
+
+        modified_prod_info['categories'] = ['NON_EXISTING_CATEGORY']
+
+        response_put = c.put(response_post.headers['location'], json=modified_prod_info)
+        assert response_put.status_code == 400
+
+
+def test_put_product_with_different_id_same_name(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+        response_post = assert_post_request(
+            client=c,
+            url='/api/products/',
+            expected_location_header='/api/products/test_product/',
+            expected_response_status=201,
+            json_body=full_product_info
+        )
+
+        response_get = c.get(response_post.headers['location'])
+
+        created_product = response_get.get_json()
+        new_prod = copy.deepcopy(created_product)
+        new_prod['id'] = 10
+
+        response_put = c.put(response_post.headers['location'], json=new_prod)
+        print(response_put.text)
+        assert response_put.status_code == 409
+
+
+def test_product_collection_post_without_json(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+        response_post = c.post('/api/products/', data="test_string")
+        assert response_post.status_code == 415
+
+
+def test_product_collection_post_idenctical_products(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+        assert_post_request(
+            client=c,
+            url='/api/products/',
+            expected_location_header='/api/products/test_product/',
+            expected_response_status=201,
+            json_body=full_product_info
+        )
+
+        assert_failed_post_request(
+            client=c,
+            url='/api/products/',
+            expected_response_status=409,
+            json_body=full_product_info
+        )
+
 def test_add_product_full_unsuccessful_avatars(app):
     with app.test_client() as c:
         add_model(
@@ -455,6 +567,22 @@ def test_add_and_get_single_product_endpoint(app):
         local_info.pop("user_name")
 
         assert_get_request(c, '/api/products/test_product/', local_info, 200)
+
+def test_add_product_without_json(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+
+        response = c.post('/api/products/', json=full_product_info)
+        assert response.status_code == 201
+
+        response_put = c.put(response.headers['location'], data="test_string")
+        assert response_put.status_code == 415
+
+def test_add_to_product_collection_without_json(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+
+        response = c.post('/api/products', data="test_string")
 
 
 def test_add_multiple_and_get_all_products_endpoint(app):
@@ -724,6 +852,21 @@ def test_successful_add_review_minimal(app):
         assert_get_request(c, '/api/reviews/', [local_info], 200)
 
 
+def test_put_review_without_json(app):
+    with app.test_client() as c:
+        add_review_prereqs(c)
+        response_post = c.post('/api/reviews/', json=full_review_info)
+        assert response_post.status_code == 201
+        response_put = c.put(response_post.headers['location'], data="test_string")
+        assert response_put.status_code == 415
+
+def test_post_review_without_json(app):
+    with app.test_client() as c:
+        add_review_prereqs(c)
+        response_post = c.post('/api/reviews/', data="test_string")
+        assert response_post.status_code == 415
+
+
 def test_successful_add_review_full(app):
     with app.test_client() as c:
         add_review_prereqs(c)
@@ -985,6 +1128,38 @@ def test_get_all_categories_empty_endpoint(app):
 
 # POST CATEGORY
 
+def test_put_category_without_json(app):
+    with app.test_client() as c:
+        add_category_prereqs(c)
+        response_post = c.post('/api/categories/', json=full_category_info)
+        assert response_post.status_code == 201
+        response_put = c.put(response_post.headers['location'], data="test_string")
+        assert response_put.status_code == 415
+
+def test_post_category_without_json(app):
+    with app.test_client() as c:
+        add_category_prereqs(c)
+        response_post = c.post('/api/categories/', data="test_string")
+        assert response_post.status_code == 415
+
+def test_post_duplicate_category(app):
+    with app.test_client () as c:
+        add_category_prereqs(c)
+        assert_post_request(
+            client=c,
+            url='/api/categories/',
+            expected_location_header='/api/categories/test_category/',
+            expected_response_status=201,
+            json_body=full_category_info
+        )
+
+        assert_failed_post_request(
+            client=c,
+            url='/api/categories/',
+            expected_response_status=409,
+            json_body=full_category_info
+        )
+
 
 def test_successful_add_category_minimal(app):
     with app.test_client() as c:
@@ -1182,12 +1357,14 @@ def assert_get_request(client, url, expected_response_body, expected_response_st
     json_response = response.get_json()
     assert response.status_code == expected_response_status
     assert json_response == expected_response_body
+    return response
 
 
 def assert_post_request(client, url, expected_location_header, expected_response_status, json_body):
     response = client.post(url, json=json_body)
     assert response.status_code == expected_response_status
     assert response.headers['location'] == expected_location_header
+    return response
 
 
 def assert_failed_post_request(client, url, expected_response_status, json_body):

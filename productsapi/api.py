@@ -13,23 +13,6 @@ api = Api()
 
 cache = Cache(config={'CACHE_TYPE': 'simple', "CACHE_DEFAULT_TIMEOUT": 300})
 
-
-class DeleteAll(Resource):
-
-    def delete_and_commit(self, value):
-        db.session.delete(value)
-        db.session.commit()
-
-    def get(self):
-        product = [self.delete_and_commit(prod)
-                   for prod in Product.query.all()]
-        review = [self.delete_and_commit(review)
-                  for review in Review.query.all()]
-        category = [self.delete_and_commit(category)
-                    for category in Category.query.all()]
-        users = [self.delete_and_commit(user) for user in User.query.all()]
-
-
 class UserItem(Resource):
     def get(self, user):
         cached_user = cache.get("user_"+str(user.id))
@@ -40,26 +23,19 @@ class UserItem(Resource):
         return user.serialize()
 
     def put(self, user):
-        if not request.json:
+        print(type(request.headers))
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
+        user.deserialize(request.json)
         try:
-            user.deserialize(request.json)
-            try:
-                validate(user.serialize(), User.json_schema())
-            except ValidationError as e_v:
-                raise BadRequest(description=str(e_v))
-            db.session.add(user)
-            db.session.commit()
-            cache.set("user_"+str(user.id), user.serialize())
-            cache.delete("users_all")
-
-        except IntegrityError:
-            raise Conflict(
-                description="User with name already exists."
-            )
-        except KeyError as e_v:
+            validate(user.serialize(), User.json_schema())
+        except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
+        db.session.add(user)
+        db.session.commit()
+        cache.set("user_"+str(user.id), user.serialize())
+        cache.delete("users_all")
 
         return Response(status=204)
 
@@ -93,7 +69,7 @@ class UserCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(users_json), status=200)
 
     def post(self):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
         try:
@@ -101,16 +77,13 @@ class UserCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        try:
-            user = User(
-                name=request.json['name'],
-                password=request.json['password'],
-                email=request.json['email'],
-                role=request.json['role'] if 'role' in request.json else "Customer",
-                avatar=request.json['avatar'] if 'avatar' in request.json else None,
-            )
-        except (ValueError, KeyError) as e_v:
-            return Response("Failed to parse request.json", 400)
+        user = User(
+            name=request.json['name'],
+            password=request.json['password'],
+            email=request.json['email'],
+            role=request.json['role'] if 'role' in request.json else "Customer",
+            avatar=request.json['avatar'] if 'avatar' in request.json else None,
+        )
 
         try:
             db.session.add(user)
@@ -140,7 +113,7 @@ class ProductItem(Resource):
         return product.serialize()
 
     def put(self, product):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
         try:
@@ -158,14 +131,11 @@ class ProductItem(Resource):
 
             categories = None
             if 'categories' in request.json:
-                try:
-                    categories = Category.query.filter(
-                        Category.name.in_(request.json['categories'])).all()
-                    if categories:
-                        product.categories = categories
-                    else:
-                        raise BadRequest
-                except (IntegrityError, KeyError) as e_i:
+                categories = Category.query.filter(
+                    Category.name.in_(request.json['categories'])).all()
+                if categories:
+                    product.categories = categories
+                else:
                     raise BadRequest
 
             try:
@@ -215,7 +185,7 @@ class ProductCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(products_json), status=200)
 
     def post(self):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
         try:
@@ -223,24 +193,13 @@ class ProductCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        try:
-            user = User.query.filter_by(
-                name=request.json['user_name']).first()
-        except (IntegrityError, KeyError) as e_i:
-            raise Conflict(
-                description="User not found in the db"
-            )
+        user = User.query.filter_by(
+            name=request.json['user_name']).first()
 
         categories = None
         if 'categories' in request.json:
-            try:
-                categories = Category.query.filter(
-                    Category.name.in_(request.json['categories'])).all()
-            except (IntegrityError, KeyError) as e_i:
-                print(
-                    "No categories found in the db"
-                )
-                categories = None
+            categories = Category.query.filter(
+                Category.name.in_(request.json['categories'])).all()
 
         try:
             product = Product(
@@ -262,8 +221,6 @@ class ProductCollection(Resource):
             raise Conflict(
                 description=e_i
             )
-        except (ValueError, KeyError) as e_v:
-            return Response("Failed to parse request.json", 400)
 
         cache.delete("products_all")
        # NOTE:: CAN BE OF USE WHEN LINKING PRODUCTS TO CATEGORIES
@@ -309,28 +266,23 @@ class ReviewItem(Resource):
         return review.serialize()
 
     def put(self, review):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        try:
-            review.deserialize(request.json)
 
-            if 'user_name' in request.json:
-                raise BadRequest(description="Cannot update user name")
+        review.deserialize(request.json)
 
-            if 'product_name' in request.json:
-                raise BadRequest(description="Cannot update product name")
+        if 'user_name' in request.json:
+            raise BadRequest(description="Cannot update user name")
 
-            review.deserialize(request.json)
+        if 'product_name' in request.json:
+            raise BadRequest(description="Cannot update product name")
 
-            db.session.add(review)
-            db.session.commit()
-            cache.set("review_"+str(review.id), review.serialize())
-            cache.delete("reviews_all")
-            
-        except IntegrityError:
-            raise Conflict(
-                description="Product_name or user_name doesn't exist in db."
-            )
+        review.deserialize(request.json)
+
+        db.session.add(review)
+        db.session.commit()
+        cache.set("review_"+str(review.id), review.serialize())
+        cache.delete("reviews_all")
 
         return Response(status=204)
 
@@ -365,7 +317,7 @@ class ReviewCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(reviews_json), status=200)
 
     def post(self):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
         try:
@@ -373,17 +325,12 @@ class ReviewCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        try:
-            user = User.query.filter_by(
-                name=request.json['user_name']).first()
-            product = Product.query.filter_by(
-                name=request.json['product_name']).first()
-            if user is None or product is None:
-                return Response("User or product not found in the db", status=409)
-        except IntegrityError as e_v:
+        user = User.query.filter_by(
+            name=request.json['user_name']).first()
+        product = Product.query.filter_by(
+            name=request.json['product_name']).first()
+        if user is None or product is None:
             return Response("User or product not found in the db", status=409)
-        except KeyError as e_k:
-            print("No username or product_name defined in response.json")
 
         try:
             review = Review(
@@ -418,7 +365,7 @@ class CategoryItem(Resource):
         return category.serialize()
 
     def put(self, category):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
         try:
@@ -429,15 +376,12 @@ class CategoryItem(Resource):
         category.deserialize(request.json)
 
         if 'product_names' in request.json:
-            try:
-                products = Product.query.filter(
-                    Product.name.in_(request.json['product_names'])).all()
-                if not products:
-                    raise BadRequest(description="Product names do not exist")
-                else:
-                    category.products = products
-            except (IntegrityError, KeyError) as e_i:
+            products = Product.query.filter(
+                Product.name.in_(request.json['product_names'])).all()
+            if not products:
                 raise BadRequest(description="Product names do not exist")
+            else:
+                category.products = products
 
         db.session.add(category)
         db.session.commit()
@@ -473,7 +417,7 @@ class CategoryCollection(Resource):
         return Response(headers={"Content-Type": "application/json"}, response=json.dumps(category_json), status=200)
 
     def post(self):
-        if not request.json:
+        if request.content_type != 'application/json':
             raise UnsupportedMediaType
 
         try:
@@ -483,16 +427,10 @@ class CategoryCollection(Resource):
 
         products = None
         if 'product_names' in request.json:
-            try:
-                products = Product.query.filter(
-                    Product.name.in_(request.json['product_names'])).all()
-                if not products:
-                    raise BadRequest(description="Product names do not exist")
-            except (IntegrityError, KeyError) as e_i:
-                print(
-                    "No products found in the db"
-                )
-                products = None
+            products = Product.query.filter(
+                Product.name.in_(request.json['product_names'])).all()
+            if not products:
+                raise BadRequest(description="Product names do not exist")
 
         try:
             category = Category(
@@ -505,8 +443,8 @@ class CategoryCollection(Resource):
             db.session.commit()
             cache.set("category_"+str(category.id), category.serialize())
 
-        except (ValueError, KeyError, IntegrityError) as e_v:
-            return Response("Failed to parse request.json", 400)
+        except (IntegrityError) as e_v:
+            return Response("Category already exists", 409)
 
         cache.delete("categories_all")
 
@@ -530,6 +468,3 @@ api.add_resource(ReviewCollection, "/api/reviews/")
 
 api.add_resource(CategoryItem, "/api/categories/<category:category>/")
 api.add_resource(CategoryCollection, "/api/categories/")
-
-# For testing purposes
-api.add_resource(DeleteAll, "/api/DROP_TABLE_ALL")
