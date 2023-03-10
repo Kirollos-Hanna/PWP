@@ -444,10 +444,12 @@ class ReviewItem(Resource):
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
         try:
+            print("HERE1")
             validate(request.json, Review.json_schema())
             
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
+        print("HERE2")
             
         prod = Product.query.filter_by(name=product).first()
         review = Review.query.filter_by(user_name=username).first()
@@ -485,16 +487,21 @@ class ReviewItem(Resource):
 
         return Response(status=204)
 
-    def delete(self, review):
+    def delete(self, username, product):
         """
         This function is used to delete reviews from the db.
         """
-    
-        db.session.delete(review)
-        db.session.commit()
-        cache.delete("reviews_all")
 
-        return Response(status=204)
+        # TODO:: FIX THIS TO DELETE SPECIFIC REVIEW
+        review = Review.query.filter_by(user_name=username, product_name=product).first()
+    
+        if review:
+            db.session.delete(review)
+            db.session.commit()
+            cache.delete("reviews_all")
+
+            return Response(status=204)
+        return Response(status=409)
 
 
 class ReviewCollection(Resource):
@@ -576,7 +583,7 @@ class ReviewCollection(Resource):
         cache.delete("reviews_all")
 
         response = make_response()
-        api_url = api.url_for(ReviewItem, username=user, product=product)
+        api_url = api.url_for(ReviewItem, username=user.name, product=product.name)
         response.headers['location'] = api_url
         response.status_code = 201
         return response

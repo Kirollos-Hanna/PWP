@@ -785,6 +785,8 @@ full_review_info_bad_product = {
 
 updated_full_review_info = {
     "rating": 3.5,
+    "user_name": "kalamies",
+    "product_name": "test_product",
     "description": """
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
@@ -961,7 +963,7 @@ def test_add_multiple_and_get_all_reviews_endpoint(app):
         assert_post_request(
             client=c,
             url='/api/users/reviews/',
-            expected_location_header="/api/reviews/2/",
+            expected_location_header="/api/users/kalamies/reviews/test_product/",
             expected_response_status=201,
             json_body=full_review_info_2
         )
@@ -974,7 +976,7 @@ def test_add_multiple_and_get_all_reviews_endpoint(app):
         local_info["id"] = 1
         local_info_2["id"] = 2
 
-        assert_get_request(c, '/api/reviews/',
+        assert_get_request(c, '/api/users/reviews/',
                            [local_info, local_info_2], 200)
 
 
@@ -992,7 +994,9 @@ def test_update_review_successful(app):
         )
 
         response_put = c.put(
-            '/api/users/kalamies/reviews/test_product/', json=updated_full_review_info)
+            '/api/users/kalamies/reviews/test_product/',
+            json=updated_full_review_info
+        )
 
         assert response_put.status_code == 204
 
