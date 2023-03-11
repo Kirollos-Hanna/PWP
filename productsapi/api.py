@@ -67,8 +67,6 @@ class UserItem(Resource):
             raise Conflict(
                 description="Cannot modify username, since it has references in other tables."
             )
-        except KeyError as e_v:
-            raise BadRequest(description=str(e_v))
 
         return Response(status=204)
 
@@ -100,6 +98,7 @@ class UserCollection(Resource):
         cached_users = cache.get("users_all")
         if cached_users:
             return Response(headers={"Content-Type": "application/json"}, response=json.dumps(cached_users), status=200)
+
         users = User.query.all()
         users_json = []
         for user in users:
@@ -130,16 +129,13 @@ class UserCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        try:
-            user = User(
-                name=request.json['name'],
-                password=request.json['password'],
-                email=request.json['email'],
-                role=request.json['role'] if 'role' in request.json else "Customer",
-                avatar=request.json['avatar'] if 'avatar' in request.json else None,
-            )
-        except (ValueError, KeyError) as e_v:
-            return Response("Failed to parse request.json", 400)
+        user = User(
+            name=request.json['name'],
+            password=request.json['password'],
+            email=request.json['email'],
+            role=request.json['role'] if 'role' in request.json else "Customer",
+            avatar=request.json['avatar'] if 'avatar' in request.json else None,
+        )
 
         try:
             db.session.add(user)
@@ -174,22 +170,16 @@ class ProductItem(Resource):
         
         user = User.query.filter_by(name=username).first()
         prod = Product.query.filter_by(name=product).first()
-        
-        cached_product = cache.get("product_"+str(prod.id))
-        if cached_product:
-            return cached_product
-        
+
         if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
             )
         
-        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
-            
-            raise Conflict(
-                description="User with this product doesn't exist in db."
-            )
-
+        cached_product = cache.get("product_"+str(prod.id))
+        if cached_product:
+            return cached_product
+        
         cache.set("product_"+str(prod.id), prod.serialize())
         return prod.serialize()
 
@@ -215,12 +205,6 @@ class ProductItem(Resource):
         if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
-            )
-        
-        if not Product.query.filter_by(user_name=username).filter_by(name=product).first():
-            
-            raise Conflict(
-                description="User with this product doesn't exist in db."
             )
 
             
@@ -257,7 +241,7 @@ class ProductItem(Resource):
 
         except IntegrityError:
             raise Conflict(
-                description="Cannot update fields that are feferenced in other tables."
+                description="Cannot update fields that are referenced in other tables."
             )
 
         return Response(status=204)
@@ -325,24 +309,15 @@ class ProductCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        try:
-            user = User.query.filter_by(
-                name=request.json['user_name']).first()
-        except (IntegrityError, KeyError) as e_i:
-            raise Conflict(
-                description="User not found in the db"
-            )
+        # TODO:: Should a product always have an user? If so, return BadResponse if user is None
+        user = User.query.filter_by(
+            name=request.json['user_name']).first()
 
         categories = None
         if 'categories' in request.json:
-            try:
-                categories = Category.query.filter(
-                    Category.name.in_(request.json['categories'])).all()
-            except (IntegrityError, KeyError) as e_i:
-                print(
-                    "No categories found in the db"
-                )
-                categories = None
+            categories = Category.query.filter(
+                Category.name.in_(request.json['categories'])).all()
+            # TODO:: If the categories are not found, should we create them here for the product?
 
         try:
             product = Product(
@@ -364,8 +339,6 @@ class ProductCollection(Resource):
             raise Conflict(
                 description=e_i
             )
-        except (ValueError, KeyError) as e_v:
-            return Response("Failed to parse request.json", 400)
 
         cache.delete("products_all")
        # NOTE:: CAN BE OF USE WHEN LINKING PRODUCTS TO CATEGORIES
@@ -421,6 +394,10 @@ class ReviewItem(Resource):
         if cached_review:
             return cached_review
         
+        # TODO:: Are these exceptions dead code? 
+        # If product doesn't exist, you cannot create a review for it
+        # You cannot delete a product without deleting the review first (implement cascading delete)
+        # If the review doesn't exist, Conflict is already returned above
         if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
@@ -444,12 +421,10 @@ class ReviewItem(Resource):
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
         try:
-            print("HERE1")
             validate(request.json, Review.json_schema())
             
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
-        print("HERE2")
             
         prod = Product.query.filter_by(name=product).first()
         review = Review.query.filter_by(user_name=username).first()
@@ -480,6 +455,11 @@ class ReviewItem(Resource):
             cache.set("review_"+str(review.id), review.serialize())
             cache.delete("reviews_all")
             
+            # TODO:: Is below dead code?
+            # The API resource path doesn't
+            # exist if the user doesn't exist
+            # If the product doesn't exist, you cannot post a review for it
+            # You cannot delete a product without deleting the review first (cascading delete) 
         except IntegrityError:
             raise Conflict(
                 description="Product_name or user_name doesn't exist in db."
@@ -492,7 +472,6 @@ class ReviewItem(Resource):
         This function is used to delete reviews from the db.
         """
 
-        # TODO:: FIX THIS TO DELETE SPECIFIC REVIEW
         review = Review.query.filter_by(user_name=username, product_name=product).first()
     
         if review:
@@ -555,17 +534,12 @@ class ReviewCollection(Resource):
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
 
-        try:
-            user = User.query.filter_by(
-                name=request.json['user_name']).first()
-            product = Product.query.filter_by(
-                name=request.json['product_name']).first()
-            if user is None or product is None:
-                return Response("User or product not found in the db", status=409)
-        except IntegrityError as e_v:
+        user = User.query.filter_by(
+            name=request.json['user_name']).first()
+        product = Product.query.filter_by(
+            name=request.json['product_name']).first()
+        if user is None or product is None:
             return Response("User or product not found in the db", status=409)
-        except KeyError as e_k:
-            print("No username or product_name defined in response.json")
 
         try:
             review = Review(
@@ -626,15 +600,12 @@ class CategoryItem(Resource):
         category.deserialize(request.json)
 
         if 'product_names' in request.json:
-            try:
-                products = Product.query.filter(
-                    Product.name.in_(request.json['product_names'])).all()
-                if not products:
-                    raise BadRequest(description="Product names do not exist")
-                else:
-                    category.products = products
-            except (IntegrityError, KeyError) as e_i:
+            products = Product.query.filter(
+                Product.name.in_(request.json['product_names'])).all()
+            if not products:
                 raise BadRequest(description="Product names do not exist")
+            else:
+                category.products = products
 
         db.session.add(category)
         db.session.commit()
@@ -699,16 +670,10 @@ class CategoryCollection(Resource):
 
         products = None
         if 'product_names' in request.json:
-            try:
-                products = Product.query.filter(
-                    Product.name.in_(request.json['product_names'])).all()
-                if not products:
-                    raise BadRequest(description="Product names do not exist")
-            except (IntegrityError, KeyError) as e_i:
-                print(
-                    "No products found in the db"
-                )
-                products = None
+            products = Product.query.filter(
+                Product.name.in_(request.json['product_names'])).all()
+            if not products:
+                raise BadRequest(description="Product names do not exist")
 
         try:
             category = Category(
@@ -722,8 +687,6 @@ class CategoryCollection(Resource):
             cache.set("category_"+str(category.id), category.serialize())
         except(IntegrityError) as e_i:
             return Response("Category already exists", 409)
-        except (ValueError, KeyError, IntegrityError) as e_v:
-            return Response("Failed to parse request.json", 400)
 
         cache.delete("categories_all")
 

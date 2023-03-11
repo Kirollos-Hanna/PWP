@@ -202,6 +202,25 @@ def test_put_without_json(app):
 
         assert response_put.status_code == 415
 
+def test_modify_user_while_username_is_used_as_foreignkey(app):
+    with app.test_client() as c:
+        add_product_prereqs(c)
+        response_post = assert_post_request(
+            client=c,
+            url='/api/users/products/',
+            expected_location_header='/api/users/kalamies/products/test_product/',
+            expected_response_status=201,
+            json_body=full_product_info
+        )
+
+        # Modify user while the username is used in products table
+        response_get = c.get('/api/users/kalamies/')
+        userinfo = response_get.get_json()
+        userinfo['name'] = 'something_else'
+
+        response_put = c.put('/api/users/kalamies/', json=userinfo)
+        assert response_put.status_code == 409
+
 
 def test_update_user_full_successful(app):
     with app.test_client() as c:
@@ -480,6 +499,23 @@ def test_put_product_with_and_without_categories(app):
 
         response_put = c.put(response_post.headers['location'], json=modified_prod_info)
         assert response_put.status_code == 400
+        
+
+def test_update_nonexisting_product(app):
+    with app.test_client() as c:
+        response_post = c.post('/api/users/', json=full_user_info)
+        response_put = c.put(
+            '/api/users/kalamies/products/non_existing_product/',
+            json=full_product_info
+        )
+        assert response_put.status_code == 409
+
+
+def test_get_nonexisting_product(app):
+    with app.test_client() as c:
+        response_post = c.post('/api/users/', json=full_user_info)
+        response_get = c.get('/api/users/kalamies/products/nonexisting_product/')
+        assert response_get.status_code == 409
 
 
 def test_product_collection_post_without_json(app):
@@ -673,6 +709,29 @@ def test_update_product_full_unsuccessful_category(app):
     make_faulty_product_put_requests(
         app, updated_full_product_info_bad_categories, 400)
 
+def test_update_product_foreignkey_fields(app):
+    with app.test_client() as c:
+        add_review_prereqs(c)
+        # Post a review of a product
+        # Then try to change product name (used as fkey in review)
+
+        response_post = assert_post_request(
+            client=c,
+            url='/api/users/reviews/',
+            expected_location_header='/api/users/kalamies/reviews/test_product/',
+            expected_response_status=201,
+            json_body=full_review_info
+        )
+        modified_prod = copy.deepcopy(minimal_product_info)
+        modified_prod['name'] = 'new_name_for_prod'
+        prod_loc = '/api/users/kalamies/products/test_product/'
+
+        response_put = c.put(
+            prod_loc,
+            json=modified_prod,
+        )
+        assert response_put.status_code == 409
+
 # DELETE PRODUCT
 
 
@@ -693,6 +752,11 @@ def test_delete_product_full(app):
         response_delete = c.delete(response_post.headers['location'])
 
         assert response_delete.status_code == 204
+
+        # Try to delete again
+        response_delete = c.delete(response_post.headers['location'])
+
+        assert response_delete.status_code == 404
 
         assert_get_request(c, '/api/users/products/', [], 200)
 
@@ -1054,7 +1118,15 @@ def test_delete_review_full(app):
 
         assert response_delete.status_code == 204
 
+        # Try to delete again
+
+        response_delete = c.delete(
+            '/api/users/kalamies/reviews/test_product/')
+
+        assert response_delete.status_code == 409
+
         assert_get_request(c, '/api/users/reviews/', [], 200)
+
 
 
 # CATEGORY TESTS
@@ -1286,6 +1358,30 @@ def test_update_category_successful(app):
         updated_local_info["id"] = 1
         updated_local_info.pop("product_names")
         assert_get_request(c, '/api/categories/', [updated_local_info], 200)
+
+
+def test_update_category_with_wrong_product_names(app):
+    with app.test_client() as c:
+        add_category_prereqs(c)
+
+        response_post = assert_post_request(
+            client=c,
+            url='/api/categories/',
+            expected_location_header="/api/categories/test_category/",
+            expected_response_status=201,
+            json_body=full_category_info
+        )
+
+        loc = response_post.headers['location']
+        mod_info = copy.deepcopy(updated_full_category_info)
+        mod_info['product_names'] = ['non_existing_product']
+
+        response_put = c.put(
+            loc,
+            json=mod_info
+        )
+
+        assert response_put.status_code == 400
 
 
 def test_update_category_unsuccessful(app):
