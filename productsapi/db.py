@@ -1,6 +1,9 @@
-from flask_sqlalchemy import SQLAlchemy
+"""
+This module contains the db structure and parameters.
+"""
 import enum
 import json
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
@@ -12,16 +15,21 @@ Product_categories = db.Table("product_categories",
                                   "category.id"), primary_key=True)
                               )
 
-
 class RoleType(str, enum.Enum):
+    """
+    This class defines the three possible roles
+    one customer can have.
+    """
     Customer = "Customer"
     Admin = "Admin"
     Seller = "Seller"
 
-
 class User(db.Model):
+    """
+    This class defines the table User and its relationships to other tables.
+    Also, the table's JSON schema is defined.
+    """
     id = db.Column(db.Integer, primary_key=True)
-
     name = db.Column(db.String(256), nullable=False, unique=True)
     password = db.Column(db.String(256), nullable=False)
     email = db.Column(db.String(256), nullable=False, unique=True)
@@ -33,6 +41,9 @@ class User(db.Model):
 
     @staticmethod
     def json_schema():
+        """
+        JSON schema for User is defined for validation.
+        """
         schema = {
             "type": "object",
             "required": ["name", "role", "password", "email"]
@@ -74,6 +85,10 @@ class User(db.Model):
         return schema
 
     def serialize(self, long=True):
+        """
+        This function turns the dictionary to JSON object either
+        in short or long form.
+        """
         serialized_user = {
             'id': self.id,
             'name': self.name,
@@ -92,6 +107,9 @@ class User(db.Model):
         return serialized_user
 
     def deserialize(self, doc):
+        """
+        This function turns the JSON object into a dictionary.
+        """
         self.name = doc['name'] #if 'name' in doc else self.name
         self.password = doc['password'] #if 'password' in doc else self.password
         self.email = doc['email'] #if 'email' in doc else self.email
@@ -100,8 +118,11 @@ class User(db.Model):
         #self.products = doc['products'] if 'products' in doc else self.products
         #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
 
-
 class Review(db.Model):
+    """
+    This class defines table Review and its relationships to 
+    other tables. Also, the table's JSON schema is defined.
+    """
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(65535), nullable=True)
     rating = db.Column(db.Float, nullable=False)
@@ -115,37 +136,39 @@ class Review(db.Model):
 
     @staticmethod
     def json_schema():
+        """
+        JSON schema for Review is defined for validation.
+        """
         schema = {
             "type": "object",
             "required": ["rating", "product_name", "user_name"]
         }
-
         props = schema["properties"] = {}
-
         props["rating"] = {
             "description": "The rating of the product by a user from 1 to 10",
             "type": "number",
             "minimum": 1,
             "maximum": 10,
         }
-
         props["user_name"] = {
             "description": "The username of the reviewer",
             "type": "string",
             "minLength": 1,
             "maxLength": 256
         }
-
         props["product_name"] = {
             "description": "The product name being reviewed",
             "type": "string",
             "minLength": 1,
             "maxLength": 256
         }
-
         return schema
 
     def serialize(self, include_product=True, include_user=True):
+        """
+        This function turns the dictionary to JSON object either
+        in short or long form.
+        """
         serialized_review = {
             'id': self.id,
             'user_name': self.user_name,
@@ -153,20 +176,19 @@ class Review(db.Model):
             'rating': self.rating,
             'product_name': self.product_name
         }
-        
         if include_product or include_user:
             serialized_review.pop("product_name")
             serialized_review.pop("user_name")
-
         if include_user:
             serialized_review['user'] = self.user.serialize(long=False)
-
         if include_product:
             serialized_review['product'] = self.product.serialize(long=False)
-
         return serialized_review
 
     def deserialize(self, doc):
+        """
+        This function turns the JSON object into a dictionary.
+        """
         self.id = doc['id'] if 'id' in doc else self.id
         self.rating = doc['rating'] if 'rating' in doc else self.rating
         self.description = doc['description'] if 'description' in doc else self.description
@@ -175,6 +197,10 @@ class Review(db.Model):
 
 
 class Product(db.Model):
+    """
+    This class defines te table Product and its relationships to other tables.
+    Also, the table's JSON schema is defined.
+    """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(256), nullable=False, unique=True)
     price = db.Column(db.Float, nullable=False)
@@ -190,16 +216,17 @@ class Product(db.Model):
 
     @staticmethod
     def json_schema():
+        """
+        JSON schema for Product is defined for validation.
+        """
         schema = {
             "type": "object",
             "required": ["name", "price", "user_name"]
         }
-
         #if is_updating:
             #schema = {
                 #"type": "object",
             #}
-
         props = schema["properties"] = {}
 
         props["user_name"] = {
@@ -208,28 +235,24 @@ class Product(db.Model):
             "minLength": 1,
             "maxLength": 256
         }
-
         props["name"] = {
             "description": "Product Name",
             "type": "string",
             "minLength": 1,
             "maxLength": 256
         }
-
         props["price"] = {
             "description": "Product Price",
             "type": "number",
             "minimum": 1,
             "maximum": 100000
         }
-
         props["description"] = {
             "description": "Product description",
             "type": "string",
             "minLength": 1,
             "maxLength": 65535
         }
-
         props["images"] = {
             "description": "A list of product image urls",
             "type": ["array", "null"],
@@ -242,7 +265,6 @@ class Product(db.Model):
             },
             "maxItems": 255
         }
-
         props["categories"] = {
             "description": "An array of category names that this product belongs to",
             "type": ["array", "null"],
@@ -253,10 +275,13 @@ class Product(db.Model):
             },
             "maxItems": 255
         }
-
         return schema
 
     def serialize(self, long=True):
+        """
+        This function turns the dictionary to JSON object either
+        in short or long form.
+        """
         serialized_product = {
             'id': self.id,
             'name': self.name,
@@ -264,16 +289,17 @@ class Product(db.Model):
             'description': self.description,
             'images': json.loads(self.images) if self.images else None
         }
-
         if long:
             serialized_product["categories"] = [category.serialize(
                 long=False) for category in self.categories]
             serialized_product["reviews"] = [review.serialize(
                 include_product=False) for review in self.reviews]
-
         return serialized_product
 
     def deserialize(self, doc):
+        """
+        This function turns the JSON object into a dictionary.
+        """
         self.id = doc['id'] if 'id' in doc else self.id
         self.name = doc['name'] if 'name' in doc else self.name
         self.price = doc['price'] if 'price' in doc else self.price
@@ -285,6 +311,10 @@ class Product(db.Model):
 
 
 class Category(db.Model):
+    """
+    In this class the table Category is defined along with its relationships
+    to other tables. Also, the table's JSON schema is defined.
+    """
     id = db.Column(db.Integer, primary_key=True)
     image = db.Column(db.String(256), nullable=True)
     name = db.Column(db.String(256), nullable=False, unique=True)
@@ -294,16 +324,17 @@ class Category(db.Model):
 
     @staticmethod
     def json_schema(is_updating=False):
+        """
+        JSON schema for Category is defined for validation.
+        """
         schema = {
             "type": "object",
             "required": ["name"]
         }
-        
         #if is_updating:
             #schema = {
                 #"type": "object",
             #}
-            
         props = schema["properties"] = {}
         props["name"] = {
             "description": "Category name",
@@ -319,7 +350,6 @@ class Category(db.Model):
             "minLength": 1,
             "maxLength": 256
         }
-
         props["product_names"] = {
             "description": "A list of product names related to the category",
             "type": "array",
@@ -332,19 +362,24 @@ class Category(db.Model):
         return schema
 
     def serialize(self, long=True):
+        """
+        This function turns the dictionary to JSON object either
+        in short or long form.
+        """
         serialized_category = {
             'id': self.id,
             'name': self.name,
             'image': self.image,
         }
-
         if long:
             serialized_category["products"] = [
                 product.serialize(long=False) for product in self.products]
-
         return serialized_category
 
     def deserialize(self, doc):
+        """
+        This function turns the JSON object into a dictionary.
+        """
         self.id = doc['id'] if 'id' in doc else self.id
         self.name = doc['name'] if 'name' in doc else self.name
         self.image = doc['image'] if 'image' in doc else self.image
