@@ -257,7 +257,7 @@ class ProductItem(Resource):
 
         except IntegrityError:
             raise Conflict(
-                description="Product with name already exists."
+                description="Cannot update fields that are feferenced in other tables."
             )
 
         return Response(status=204)
