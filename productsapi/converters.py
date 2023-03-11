@@ -1,4 +1,4 @@
-from productsapi.db import User, Product, Review, Category
+from productsapi.db import User, Category
 from werkzeug.routing import BaseConverter
 from werkzeug.exceptions import NotFound
 
@@ -17,27 +17,6 @@ class UserConverter(BaseConverter):
     def to_url(self, db_user):
         return db_user.name
 
-class ProductConverter(BaseConverter):
-
-    def to_python(self, prod_name):
-        db_product = Product.query.filter_by(name=prod_name).first()
-        if db_product is None:
-            raise NotFound
-        return db_product
-    
-    def to_url(self, db_product):
-        return db_product.name
-
-class ReviewConverter(BaseConverter):
-
-    def to_python(self, review_id):
-        db_review = Review.query.filter_by(id=review_id).first()
-        if db_review is None:
-            raise NotFound
-        return db_review
-    
-    def to_url(self, db_review):
-        return str(db_review.id)
 
 class CategoryConverter(BaseConverter):
 
@@ -49,3 +28,4 @@ class CategoryConverter(BaseConverter):
     
     def to_url(self, db_category):
         return db_category.name
+
