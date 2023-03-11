@@ -1,16 +1,18 @@
-
-
-
-from path import Path
+"""
+In this module, databases are created with example data.
+Please refer to db.py for further db parameter info and structure.
+"""
 import sys
-
+from path import Path
+from productsapi import create_app, db
+from productsapi.db import User, Product, Category, Review
 # directory reach
 directory = Path(__file__).abspath()
 
 # setting path
 sys.path.append(directory.parent.parent)
-from productsapi import create_app, db
-from productsapi.db import db, User, Product, Category, Review
+#from productsapi import create_app, db
+#from productsapi.db import db, User, Product, Category, Review
 
 app = create_app()
 # Create an application context
@@ -48,10 +50,11 @@ db.session.commit()
 product1 = Product(name="Fender Stratocaster",
                    description="A brand new Fender Stratocaster Deluxe Edition. Made in USA.",
                    price=1999.99, user_name=user1.name, categories=[category1])
-product2 = Product(name="Lenovo Thinkpad t420", description="A refurbished business model laptop.", price=149.99,
-                   user_name=user1.name, categories=[category2])
+product2 = Product(name="Lenovo Thinkpad t420", description="A refurbished business model laptop.",
+                   price=149.99, user_name=user1.name, categories=[category2])
 product3 = Product(name="SAMSUNG 980 SSD 1TB PCle 3.0x4, NVMe M.2 2280",
-                   description="UPGRADE TO IMPRESSIVE NVMe SPEED Whether you need a boost for gaming or a seamless workflow for heavy graphics, the 980 is a smart choice for outstanding SSD performance",
+                   description="UPGRADE TO NVMe SPEED Whether you need a boost for gaming"\
+                   "or a seamless workflow for heavy graphics, the 980 is a smart choice.",
                    price=69.99, user_name=user3.name, categories=[category2])
 db.session.add(product1)
 db.session.add(product2)
@@ -72,11 +75,12 @@ db.session.commit()
 #db.session.add(product_category3)
 
 # Add random reviews
-review1 = Review(rating=4.9, description="An amazing guitar!!", user_name=user2.name, product_name=product1.name)
-review2 = Review(rating=0.5, description="Bad laptop, can't run Fortnite with 300 fps.", user_name=user2.name,
-                 product_name=product2.name)
-review3 = Review(rating=4.4, description="Almost the perfect laptop! Thinkpads rock!", user_name=user3.name,
-                 product_name=product2.name)
+review1 = Review(rating=4.9, description="An amazing guitar!!", user_name=user2.name,
+    product_name=product1.name)
+review2 = Review(rating=0.5, description="Bad laptop, can't run Fortnite with 300 fps.",
+                user_name=user2.name, product_name=product2.name)
+review3 = Review(rating=4.4, description="Almost the perfect laptop! Thinkpads rock!",
+                user_name=user3.name, product_name=product2.name)
 db.session.add(review1)
 db.session.add(review2)
 db.session.add(review3)
@@ -88,3 +92,4 @@ db.session.commit()
 app_ctx.pop()
 
 print("Database initialized and populated.")
+
