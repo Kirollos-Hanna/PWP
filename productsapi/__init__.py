@@ -3,7 +3,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy import event
 from productsapi.db import db
 from productsapi.api import api, cache
-from productsapi.converters import UserConverter, ProductConverter, ReviewConverter, CategoryConverter
+from productsapi.converters import UserConverter, CategoryConverter
 import os
 
 # Setup the sqlite db to use foreign keys
@@ -38,8 +38,6 @@ def create_app(test_config=None):
     
     # Map converters
     app.url_map.converters['user'] = UserConverter
-    app.url_map.converters['product'] = ProductConverter
-    app.url_map.converters['review'] = ReviewConverter
     app.url_map.converters['category'] = CategoryConverter
 
     # Init api
