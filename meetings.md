@@ -34,7 +34,7 @@
 
 
 ## Meeting 3.
-* **DATE:**
+* **DATE:** 09.03.2023
 * **ASSISTANTS:** Iván Sánchez Milara
 
 ### Minutes
