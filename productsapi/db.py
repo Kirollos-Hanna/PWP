@@ -4,7 +4,12 @@ This module contains the db structure and parameters.
 import enum
 import json
 from flask_sqlalchemy import SQLAlchemy
+import jwt
+import datetime
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 db = SQLAlchemy()
 
 # Create table for many-to-many relationship between categories and products
@@ -15,6 +20,7 @@ Product_categories = db.Table("product_categories",
                                   "category.id"), primary_key=True)
                               )
 
+
 class RoleType(str, enum.Enum):
     """
     This class defines the three possible roles
@@ -24,6 +30,32 @@ class RoleType(str, enum.Enum):
     Admin = "Admin"
     Seller = "Seller"
 
+class BlacklistToken(db.Model):
+    """
+    Token Model for storing JWT tokens
+    """
+    __tablename__ = 'blacklist_tokens'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    token = db.Column(db.String(500), unique=True, nullable=False)
+    blacklisted_on = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, token):
+        self.token = token
+        self.blacklisted_on = datetime.datetime.now()
+
+    def __repr__(self):
+        return '<id: token: {}'.format(self.token)
+    
+    @staticmethod
+    def check_blacklist(auth_token):
+        # check whether auth token has been blacklisted
+        res = BlacklistToken.query.filter_by(token=str(auth_token)).first()
+        if res:
+            return True  
+        else:
+            return False
+    
 class User(db.Model):
     """
     This class defines the table User and its relationships to other tables.
@@ -38,6 +70,45 @@ class User(db.Model):
 
     products = db.relationship("Product", back_populates="user")
     reviews = db.relationship("Review", back_populates="user")
+
+    def encode_auth_token(self, user_id):
+        """
+        Generates the Auth Token
+        :return: string
+        """
+        try:
+            payload = {
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1, seconds=60),
+                'iat': datetime.datetime.utcnow(),
+                'sub': user_id
+            }
+            return jwt.encode(
+                payload,
+                os.getenv("SECRET_KEY"),
+                algorithm='HS256'
+            )
+        except Exception as e:
+            return e
+
+    @staticmethod
+    def decode_auth_token(auth_token):
+        """
+        Decodes the auth token
+        :param auth_token:
+        :return: integer|string
+        """
+        try:
+            payload = jwt.decode(auth_token,
+                                 os.getenv("SECRET_KEY"))
+            is_blacklisted_token = BlacklistToken.check_blacklist(auth_token)
+            if is_blacklisted_token:
+                return 'Token blacklisted. Please log in again.'
+            else:
+                return payload['sub']
+        except jwt.ExpiredSignatureError:
+            return 'Signature expired. Please log in again.'
+        except jwt.InvalidTokenError:
+            return 'Invalid token. Please log in again.'
 
     @staticmethod
     def json_schema():
@@ -110,10 +181,10 @@ class User(db.Model):
         """
         This function turns the JSON object into a dictionary.
         """
-        self.name = doc['name'] #if 'name' in doc else self.name
-        self.password = doc['password'] #if 'password' in doc else self.password
-        self.email = doc['email'] #if 'email' in doc else self.email
-        self.role = doc['role'] #if 'role' in doc else self.role
+        self.name = doc['name']  # if 'name' in doc else self.name
+        self.password = doc['password'] # if 'password' in doc else self.password
+        self.email = doc['email']  # if 'email' in doc else self.email
+        self.role = doc['role']  # if 'role' in doc else self.role
         self.avatar = doc['avatar'] if 'avatar' in doc else self.avatar
         #self.products = doc['products'] if 'products' in doc else self.products
         #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
@@ -127,7 +198,8 @@ class Review(db.Model):
     description = db.Column(db.String(65535), nullable=True)
     rating = db.Column(db.Float, nullable=False)
 
-    user_name = db.Column(db.String(256), db.ForeignKey("user.name"), nullable=False)
+    user_name = db.Column(db.String(256), db.ForeignKey(
+        "user.name"), nullable=False)
     product_name = db.Column(db.String(256), db.ForeignKey(
         "product.name"), nullable=False)
 
@@ -206,7 +278,8 @@ class Product(db.Model):
     price = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(65535), nullable=True)
     images = db.Column(db.String(65535), nullable=True)
-    user_name = db.Column(db.String(256), db.ForeignKey("user.name"), nullable=False)
+    user_name = db.Column(db.String(256), db.ForeignKey(
+        "user.name"), nullable=False)
     #user_name = db.Column(db.String(256), nullable=False)
 
     user = db.relationship("User", back_populates="products")
@@ -223,10 +296,10 @@ class Product(db.Model):
             "type": "object",
             "required": ["name", "price", "user_name"]
         }
-        #if is_updating:
-            #schema = {
-                #"type": "object",
-            #}
+        # if is_updating:
+        # schema = {
+        # "type": "object",
+        # }
         props = schema["properties"] = {}
 
         props["user_name"] = {
@@ -304,7 +377,8 @@ class Product(db.Model):
         self.name = doc['name'] if 'name' in doc else self.name
         self.price = doc['price'] if 'price' in doc else self.price
         self.description = doc['description'] if 'description' in doc else self.description
-        self.images = json.dumps(doc['images']) if 'images' in doc else self.images
+        self.images = json.dumps(
+            doc['images']) if 'images' in doc else self.images
         self.user_name = doc['user_name'] if 'user_name' in doc else self.user_name
         #self.reviews = doc['reviews'] if 'reviews' in doc else self.reviews
         #self.categories = doc['categories'] if 'categories' in doc else self.categories
@@ -331,10 +405,10 @@ class Category(db.Model):
             "type": "object",
             "required": ["name"]
         }
-        #if is_updating:
-            #schema = {
-                #"type": "object",
-            #}
+        # if is_updating:
+        # schema = {
+        # "type": "object",
+        # }
         props = schema["properties"] = {}
         props["name"] = {
             "description": "Category name",

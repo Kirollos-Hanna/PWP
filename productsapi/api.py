@@ -1,18 +1,54 @@
 import json
-from flask import Response, request, make_response
+from flask import Response, request, make_response, jsonify
 from flask_restful import Api, Resource
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Conflict, BadRequest, UnsupportedMediaType
 from jsonschema import validate, ValidationError
 from flask_caching import Cache
-from productsapi.db import db, User, Product, Review, Category
+from productsapi.db import db, User, Product, Review, Category, BlacklistToken
+from validate_email import validate_email
 #from werkzeug.routing import BaseConverter
 #from productsapi.converters import UserConverter
-
 api = Api()
 
 cache = Cache(config={'CACHE_TYPE': 'simple', "CACHE_DEFAULT_TIMEOUT": 300})
 
+# HELPER FUNCTIONS
+
+def authorizeUser(auth_header):
+    if auth_header:
+        try:
+            auth_token = auth_header.split(" ")[1]
+        except IndexError:
+            responseObject = {
+                'status': 'fail',
+                'message': 'Bearer token malformed.'
+            }
+            response = jsonify(responseObject)
+            response.status_code = 401
+            return response
+    else:
+        auth_token = ''
+    if auth_token:
+        resp = User.decode_auth_token(auth_token)
+        if 'token blacklisted' in resp.lower() or 'signature expired' in resp.lower() or 'invalid token' in resp.lower():
+            responseObject = {
+                'status': 'fail',
+                'message': resp
+            }
+            response = jsonify(responseObject)
+            response.status_code = 401
+            return response
+        else:
+            return "authorized"
+    else:
+        responseObject = {
+            'status': 'fail',
+            'message': 'Provide a valid auth token.'
+        }
+        response = jsonify(responseObject)
+        response.status_code = 401
+        return response
 
 class UserItem(Resource):
     """
@@ -26,10 +62,14 @@ class UserItem(Resource):
         This view function fetches the information of the user. Individual
         users are looked up through a particular product and a username. 
         """
-        #print(user)
         #user = User.query.filter_by(name=user).first()
         #if not user:
             #raise Conflict(description="User_name doesn't exist in db.")
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         cached_user = cache.get("user_"+str(user.id))
         if cached_user:
             return cached_user
@@ -44,8 +84,24 @@ class UserItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, User.json_schema())
+            if 'email' in request.json:
+                is_valid_email = validate_email(
+                    email_address=request.json["email"],
+                    check_format=True,
+                    check_blacklist=False,
+                    check_dns=False,
+                    dns_timeout=10,
+                    check_smtp=False,
+                    smtp_timeout=10)
+                if not is_valid_email:
+                    raise BadRequest(description="Invalid Email")
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v)) from e_v
         user.deserialize(request.json)
@@ -64,6 +120,11 @@ class UserItem(Resource):
         """
         This function deletes the user from the db.
         """
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         db.session.delete(user)
         db.session.commit()
         cache.delete("users_all")
@@ -82,10 +143,16 @@ class UserCollection(Resource):
         """
         This function fetches the information of all users in the db.
         """
+        # get the auth token
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
+        
         cached_users = cache.get("users_all")
         if cached_users:
-            return Response(headers={"Content-Type": "application/json"}, \
-            response=json.dumps(cached_users), status=200)
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_users), status=200)
         users = User.query.all()
         users_json = []
         for user in users:
@@ -95,12 +162,12 @@ class UserCollection(Resource):
                 'email': user.email,
                 'role': user.role,
                 'avatar': user.avatar,
-                #'products': [product.serialize() for product in user.products],
-                #'reviews': [review.serialize() for review in user.reviews]
+                # 'products': [product.serialize() for product in user.products],
+                # 'reviews': [review.serialize() for review in user.reviews]
             })
         cache.set("users_all", users_json)
-        return Response(headers={"Content-Type": "application/json"}, \
-        response=json.dumps(users_json), status=200)
+        return Response(headers={"Content-Type": "application/json"},
+                        response=json.dumps(users_json), status=200)
 
     def post(self):
         """
@@ -112,6 +179,17 @@ class UserCollection(Resource):
             raise UnsupportedMediaType
         try:
             validate(request.json, User.json_schema())
+            is_valid_email = validate_email(
+                email_address=request.json["email"],
+                check_format=True,
+                check_blacklist=False,
+                check_dns=False,
+                dns_timeout=10,
+                check_smtp=False,
+                smtp_timeout=10)
+            if not is_valid_email:
+                raise BadRequest(description="Invalid Email")
+
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v)) from e_v
 
@@ -126,6 +204,8 @@ class UserCollection(Resource):
         try:
             db.session.add(user)
             db.session.commit()
+            # generate the auth token
+            auth_token = user.encode_auth_token(user.name)
             cache.set("user_"+str(user.id), user.serialize())
         except IntegrityError as exc:
             raise Conflict(
@@ -133,11 +213,94 @@ class UserCollection(Resource):
                 {request.json['email']} already exists"
             )
         cache.delete("users_all")
-        response = make_response()
+        responseObject = {
+            'status': 'success',
+            'message': 'Successfully registered.',
+            'auth_token': auth_token.decode()
+        }
+        response = make_response(jsonify(responseObject))
         api_url = api.url_for(UserItem, user=user)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
+
+class UserAuth(Resource):
+    
+    def post(self):
+         # get the post data
+        post_data = request.get_json()
+        try:
+            # fetch the user data
+            user = User.query.filter_by(
+                email=post_data.get('email')
+              ).first()
+            auth_token = user.encode_auth_token(user.name)
+            if auth_token:
+                responseObject = {
+                    'status': 'success',
+                    'message': 'Successfully logged in.',
+                    'auth_token': auth_token.decode()
+                }
+                response = make_response(jsonify(responseObject))
+                response.status_code = 200
+                return response
+        except Exception as e:
+            print(e)
+            responseObject = {
+                'status': 'fail',
+                'message': 'Try again'
+            }
+            response = make_response(jsonify(responseObject))
+            response.status_code = 500
+            return response
+        
+    def delete(self):
+        # get auth token
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            auth_token = auth_header.split(" ")[1]
+        else:
+            auth_token = ''
+        if auth_token:
+            resp = User.decode_auth_token(auth_token)
+            if not 'token blacklisted' in resp.lower() and not 'signature expired' in resp.lower() and not 'invalid token' in resp.lower():
+                # mark the token as blacklisted
+                blacklist_token = BlacklistToken(token=auth_token)
+                try:
+                    # insert the token
+                    db.session.add(blacklist_token)
+                    db.session.commit()
+                    responseObject = {
+                        'status': 'success',
+                        'message': 'Successfully logged out.'
+                    }
+                    response = make_response(jsonify(responseObject))
+                    response.status_code = 200
+                    return response
+                except Exception as e:
+                    responseObject = {
+                        'status': 'fail',
+                        'message': e
+                    }
+                    response = make_response(jsonify(responseObject))
+                    response.status_code = 200
+                    return response
+            else:
+                responseObject = {
+                    'status': 'fail',
+                    'message': resp
+                }
+                response = make_response(jsonify(responseObject))
+                response.status_code = 401
+                return response
+        else:
+            responseObject = {
+                'status': 'fail',
+                'message': 'Provide a valid auth token.'
+            }
+            response = make_response(jsonify(responseObject))
+            response.status_code = 403
+            return response
 
 class ProductItem(Resource):
     """
@@ -152,17 +315,22 @@ class ProductItem(Resource):
         This function fetches and returns the information of an individual 
         product. 
         """
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         user = User.query.filter_by(name=username).first()
         prod = Product.query.filter_by(name=product).first()
         if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
             )
-        
+
         cached_product = cache.get("product_"+str(prod.id))
         if cached_product:
             return cached_product
-        
+
         cache.set("product_"+str(prod.id), prod.serialize())
         return prod.serialize()
 
@@ -174,6 +342,11 @@ class ProductItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, Product.json_schema())
         except ValidationError as e_v:
@@ -185,7 +358,6 @@ class ProductItem(Resource):
                 description="This product doesn't exist in db."
             )
 
-            
         prod.deserialize(request.json)
         #user = None
         #if 'user_name' in request.json:
@@ -231,6 +403,7 @@ class ProductItem(Resource):
             return Response(status=204)
         return Response(status=404)
 
+
 class ProductCollection(Resource):
     """
     This class holds the requests for all the products in the db.
@@ -246,8 +419,8 @@ class ProductCollection(Resource):
         """
         cached_products = cache.get("products_all")
         if cached_products:
-            return Response(headers={"Content-Type": "application/json"}, \
-            response=json.dumps(cached_products), status=200)
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_products), status=200)
         products = Product.query.all()
         products_json = []
         for product in products:
@@ -262,8 +435,8 @@ class ProductCollection(Resource):
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
         cache.set("products_all", products_json)
-        return Response(headers={"Content-Type": "application/json"}, \
-        response=json.dumps(products_json), status=200)
+        return Response(headers={"Content-Type": "application/json"},
+                        response=json.dumps(products_json), status=200)
 
     def post(self):
         """
@@ -272,6 +445,11 @@ class ProductCollection(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, Product.json_schema())
         except ValidationError as e_v:
@@ -330,13 +508,15 @@ class ProductCollection(Resource):
        # except IntegrityError as e_v:
        #     raise Conflict(
        #         description=f'Failed to link product: {request.json["name"]} to \
-       #category: {request.json["category"]}'
+       # category: {request.json["category"]}'
        #     )
         response = make_response()
-        api_url = api.url_for(ProductItem, username=user.name, product=product.name)
+        api_url = api.url_for(
+            ProductItem, username=user.name, product=product.name)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
+
 
 class ReviewItem(Resource):
     """
@@ -349,15 +529,21 @@ class ReviewItem(Resource):
         This function is used to fetch the information of a single review.
         The function requires a product name and a username.
         """
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         review = Review.query.filter_by(user_name=username).first()
         if not review:
-            raise Conflict(description="No review to this product by this user.")
+            raise Conflict(
+                description="No review to this product by this user.")
         prod = Product.query.filter_by(name=product).first()
         cached_review = cache.get("review_"+str(review.id))
         if cached_review:
             return cached_review
-        
-        # TODO:: Are these exceptions dead code? 
+
+        # TODO:: Are these exceptions dead code?
         # If product doesn't exist, you cannot create a review for it
         # You cannot delete a product without deleting the review first (implement cascading delete)
         # If the review doesn't exist, Conflict is already returned above
@@ -366,7 +552,7 @@ class ReviewItem(Resource):
                 description="This product doesn't exist in db."
             )
         if not Review.query.filter_by(user_name=username).filter_by(product_name=product).\
-        first():
+                first():
             raise Conflict(
                 description="This review doesn't exist in db."
             )
@@ -381,11 +567,16 @@ class ReviewItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, Review.json_schema())
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
-            
+
         prod = Product.query.filter_by(name=product).first()
         review = Review.query.filter_by(user_name=username).first()
         #print (prod, review)
@@ -393,8 +584,7 @@ class ReviewItem(Resource):
             raise Conflict(
                 description="This product doesn't exist in db."
             )
-        if not Review.query.filter_by(user_name=username).filter_by\
-        (product_name=product).first():
+        if not Review.query.filter_by(user_name=username).filter_by(product_name=product).first():
             raise Conflict(
                 description="This review doesn't exist in db."
             )
@@ -404,12 +594,12 @@ class ReviewItem(Resource):
             db.session.commit()
             cache.set("review_"+str(review.id), review.serialize())
             cache.delete("reviews_all")
-            
+
             # TODO:: Is below dead code?
             # The API resource path doesn't
             # exist if the user doesn't exist
             # If the product doesn't exist, you cannot post a review for it
-            # You cannot delete a product without deleting the review first (cascading delete) 
+            # You cannot delete a product without deleting the review first (cascading delete)
         except IntegrityError:
             raise Conflict(
                 description="Product_name or user_name doesn't exist in db."
@@ -420,14 +610,20 @@ class ReviewItem(Resource):
         """
         This function is used to delete reviews from the db.
         """
-        review = Review.query.filter_by\
-        (user_name=username, product_name=product).first()
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
+        review = Review.query.filter_by(
+            user_name=username, product_name=product).first()
         if review:
             db.session.delete(review)
             db.session.commit()
             cache.delete("reviews_all")
             return Response(status=204)
         return Response(status=409)
+
 
 class ReviewCollection(Resource):
     """
@@ -440,10 +636,16 @@ class ReviewCollection(Resource):
         """
         This function is used to look up all reviews in the db.
         """
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
+        
         cached_reviews = cache.get("reviews_all")
         if cached_reviews:
-            return Response(headers={"Content-Type": "application/json"}, \
-            response=json.dumps(cached_reviews), status=200)
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_reviews), status=200)
         reviews = Review.query.all()
         reviews_json = []
         for review in reviews:
@@ -453,8 +655,8 @@ class ReviewCollection(Resource):
                 'rating': review.rating,
                 'user_name': review.user_name,
                 'product_name': review.product_name,
-                #'user': review.user.serialize(),
-                #'product': review.product.serialize(),
+                # 'user': review.user.serialize(),
+                # 'product': review.product.serialize(),
             })
         cache.set("reviews_all", reviews_json)
         return Response(
@@ -471,6 +673,11 @@ class ReviewCollection(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, Review.json_schema())
         except ValidationError as e_v:
@@ -485,7 +692,7 @@ class ReviewCollection(Resource):
 
         try:
             review = Review(
-                description=request.json['description'] if 'description' in \
+                description=request.json['description'] if 'description' in
                 request.json else None,
                 rating=request.json['rating'],
                 user=user,
@@ -498,10 +705,12 @@ class ReviewCollection(Resource):
         cache.set("review_"+str(review.id), review.serialize())
         cache.delete("reviews_all")
         response = make_response()
-        api_url = api.url_for(ReviewItem, username=user.name, product=product.name)
+        api_url = api.url_for(
+            ReviewItem, username=user.name, product=product.name)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
+
 
 class CategoryItem(Resource):
     """
@@ -515,6 +724,11 @@ class CategoryItem(Resource):
         """
         This function is used to fetch the information of a single category.
         """
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         cached_category = cache.get("category_"+str(category.id))
         if cached_category:
             return cached_category
@@ -529,6 +743,11 @@ class CategoryItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, Category.json_schema())
         except ValidationError as e_v:
@@ -552,10 +771,16 @@ class CategoryItem(Resource):
         """
         This function can be used to delete a category.
         """
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         db.session.delete(category)
         db.session.commit()
         cache.delete("categories_all")
         return Response(status=204)
+
 
 class CategoryCollection(Resource):
     """
@@ -571,8 +796,8 @@ class CategoryCollection(Resource):
         """
         cached_categories = cache.get("categories_all")
         if cached_categories:
-            return Response(headers={"Content-Type": "application/json"}, \
-            response=json.dumps(cached_categories), status=200)
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_categories), status=200)
         categories = Category.query.all()
         category_json = []
         for category in categories:
@@ -583,8 +808,8 @@ class CategoryCollection(Resource):
                 # 'products': [product.serialize(long=False) for product in category.products]
             })
         cache.set("categories_all", category_json)
-        return Response(headers={"Content-Type": "application/json"}, \
-        response=json.dumps(category_json), status=200)
+        return Response(headers={"Content-Type": "application/json"},
+                        response=json.dumps(category_json), status=200)
 
     def post(self):
         """
@@ -594,6 +819,11 @@ class CategoryCollection(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
+        
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
         try:
             validate(request.json, Category.json_schema())
         except ValidationError as e_v:
@@ -625,13 +855,14 @@ class CategoryCollection(Resource):
         return response
 # Routing resources
 
+api.add_resource(UserAuth, "/api/users/auth/")
 api.add_resource(UserItem, "/api/users/<user:user>/")
 api.add_resource(UserCollection, "/api/users/")
 api.add_resource(ProductItem, "/api/users/<username>/products/<product>/")
 api.add_resource(ProductCollection,
-    "/api/users/products/",
-    "/api/categories/products/"
-)
+                 "/api/users/products/",
+                 "/api/categories/products/"
+                 )
 api.add_resource(ReviewItem, "/api/users/<username>/reviews/<product>/")
 api.add_resource(ReviewCollection, "/api/users/reviews/")
 api.add_resource(CategoryItem, "/api/categories/<category:category>/")
