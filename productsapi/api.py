@@ -216,7 +216,7 @@ class UserCollection(Resource):
         responseObject = {
             'status': 'success',
             'message': 'Successfully registered.',
-            'auth_token': auth_token.decode()
+            'auth_token': auth_token
         }
         response = make_response(jsonify(responseObject))
         api_url = api.url_for(UserItem, user=user)
@@ -239,7 +239,7 @@ class UserAuth(Resource):
                 responseObject = {
                     'status': 'success',
                     'message': 'Successfully logged in.',
-                    'auth_token': auth_token.decode()
+                    'auth_token': auth_token
                 }
                 response = make_response(jsonify(responseObject))
                 response.status_code = 200

@@ -193,7 +193,7 @@ def test_encode_auth_token(app):
             role="Customer",
         )
         auth_token = user.encode_auth_token(user.name)
-        assert isinstance(auth_token, bytes)
+        assert isinstance(auth_token, str)
 
 
 def test_add_and_get_single_user_endpoint(app):

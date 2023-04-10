@@ -71,7 +71,7 @@ class User(db.Model):
     products = db.relationship("Product", back_populates="user")
     reviews = db.relationship("Review", back_populates="user")
 
-    def encode_auth_token(self, user_id):
+    def encode_auth_token(self, user_name):
         """
         Generates the Auth Token
         :return: string
@@ -80,7 +80,7 @@ class User(db.Model):
             payload = {
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1, seconds=60),
                 'iat': datetime.datetime.utcnow(),
-                'sub': user_id
+                'sub': user_name
             }
             return jwt.encode(
                 payload,
@@ -99,7 +99,7 @@ class User(db.Model):
         """
         try:
             payload = jwt.decode(auth_token,
-                                 os.getenv("SECRET_KEY"))
+                                 os.getenv("SECRET_KEY"), algorithms=["HS256"])
             is_blacklisted_token = BlacklistToken.check_blacklist(auth_token)
             if is_blacklisted_token:
                 return 'Token blacklisted. Please log in again.'
