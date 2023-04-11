@@ -34,7 +34,7 @@ pip install -r requirements.txt
 ```
 Run the create_database-script to initialize and populate the database.
 ```bash
-python create_database.py
+python .\/productsapi/create_database.py
 ```
 ## Usage
 
