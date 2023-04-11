@@ -431,7 +431,7 @@ class ProductCollection(Resource):
                 'description': product.description,
                 'images': json.loads(product.images) if product.images else None,
                 'user_name': product.user_name,
-                'reviews': [review.serialize(include_product=False) for review in product.reviews],
+                'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
         cache.set("products_all", products_json)
