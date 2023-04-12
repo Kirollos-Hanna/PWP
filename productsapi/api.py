@@ -252,10 +252,10 @@ class CommerceMetaBuilder(MasonBuilder):
            User.json_schema() 
         )
 
-    def add_control_edit_product(self, product):
+    def add_control_edit_product(self, username, product):
         self.add_control_put(
            "edit",
-           api.url_for(ProductItem, product=product),
+           api.url_for(ProductItem, username=username, product=product),
            Product.json_schema() 
         )
 
@@ -266,10 +266,10 @@ class CommerceMetaBuilder(MasonBuilder):
            Category.json_schema() 
         )
 
-    def add_control_edit_review(self, review):
+    def add_control_edit_review(self, username, product):
         self.add_control_put(
            "edit",
-           api.url_for(ReviewItem, review=review),
+           api.url_for(ReviewItem, username=username, product=product),
            Review.json_schema() 
         )
 
@@ -279,10 +279,10 @@ class CommerceMetaBuilder(MasonBuilder):
             api.url_for(UserItem, user=user),           
         )
 
-    def add_control_delete_product(self, product):
+    def add_control_delete_product(self, username, product):
         self.add_control_delete(
             "commercemeta:delete",
-            api.url_for(ProductItem, product=product),    
+            api.url_for(ProductItem, username=username, product=product),    
         )
     
     def add_control_delete_category(self, category):
@@ -291,10 +291,10 @@ class CommerceMetaBuilder(MasonBuilder):
             api.url_for(CategoryItem, category=category),    
         )
 
-    def add_control_delete_review(self, review):
+    def add_control_delete_review(self, username, product):
         self.add_control_delete(
             "commercemeta:delete",
-            api.url_for(ReviewItem, review=review),    
+            api.url_for(ReviewItem, username=username, product=product),    
         )
 
 
@@ -603,32 +603,32 @@ class ProductItem(Resource):
         if is_authorized != "authorized":
             return is_authorized
         user = User.query.filter_by(name=username).first()
-        #prod = Product.query.filter_by(name=product).first()
-        if not product:
+        prod = Product.query.filter_by(name=product).first()
+        if not prod:
             raise Conflict(
                 description="This product doesn't exist in db."
             )
 
-        cached_product = cache.get("product_"+str(product.id))
+        cached_product = cache.get("product_"+str(prod.id))
         if cached_product:
             return cached_product
 
-        cache.set("product_"+str(product.id), product.serialize())
+        cache.set("product_"+str(prod.id), prod.serialize())
 
-        data = CommerceMetaBuilder(product.serialize())
+        data = CommerceMetaBuilder(prod.serialize())
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("profile", href=PRODUCT_PROFILE_URL)
         data.add_control("self", href=request.path)
         data.add_control("collection", href=api.url_for(ProductCollection))
-        data.add_control_edit_product(product)
-        data.add_control_delete_product(product)
+        data.add_control_edit_product(username, product)
+        data.add_control_delete_product(username, product)
         data.add_control(
             "commercemeta:products-by", 
-            href=url_for("products_by_user")
+            href=url_for("products_by_user", user=username)
         )
         data.add_control(
             "commercemeta:products-by", 
-            href=url_for("products_by_category")
+            href=url_for("products_by_category", category=prod.categories)
         )
 
         return Response(json.dumps(data), 200, mimetype=MASON)
@@ -968,15 +968,15 @@ class ReviewItem(Resource):
         cache.set("review_"+str(review.id), review.serialize())
 
         data = CommerceMetaBuilder(review.serialize())
-        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("profile", href=REVIEW_PROFILE_URL)
         data.add_control("self", href=request.path)
-        data.add_control("collection", href=api.url_for(ReviewCollection))
-        data.add_control_edit_review(review)
-        data.add_control_delete_review(review)
+        data.add_control("collection", href=url_for("reviews"))
+        data.add_control_edit_review(username, product)
+        data.add_control_delete_review(username, product)
         data.add_control(
             "commercemeta:reviews-by",
-            href=url_for("reviews_by", user=user)
+            href=url_for("reviews_by", user=review.user_name)
         )
         #print(user, username)
         return Response(json.dumps(data), 200, mimetype=MASON)
