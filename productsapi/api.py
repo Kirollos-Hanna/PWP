@@ -444,7 +444,7 @@ class UserCollection(Resource):
                 # 'products': [product.serialize() for product in user.products],
                 # 'reviews': [review.serialize() for review in user.reviews]
             })
-            item.add_control("item", api.url_for(ProductItem, product=product))
+            item.add_control("item", api.url_for(UserItem, user=user))
             data["items"].append(item)
 
         cache.set("users_all", data["items"])
