@@ -327,21 +327,20 @@ class UserItem(Resource):
 
         data = CommerceMetaBuilder(user.serialize())
         #print(data)
-        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("profile", href=USER_PROFILE_URL)
         data.add_control("self", href=request.path)
         data.add_control("collection", href=api.url_for(UserCollection))
         data.add_control_edit_user(user)
         data.add_control_delete_user(user)
-        #data.add_control(
-            #"commercemeta:products-by", 
-            #href=url_for("products_by_user")
-        #)
         data.add_control(
             "commercemeta:reviews-by",
             href=url_for("reviews_by", user=user)
         )
-
+        data.add_control(
+            "commercemeta:products-by",
+            href=url_for("products_by_user", user=user)
+        )
 
         return Response(json.dumps(data), 200, mimetype=MASON)
 
@@ -617,16 +616,20 @@ class ProductItem(Resource):
         cache.set("product_"+str(product.id), product.serialize())
 
         data = CommerceMetaBuilder(product.serialize())
-        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("profile", href=PRODUCT_PROFILE_URL)
         data.add_control("self", href=request.path)
         data.add_control("collection", href=api.url_for(ProductCollection))
         data.add_control_edit_product(product)
         data.add_control_delete_product(product)
-        #data.add_control(
-            #"commercemeta:products-by", 
-            #href=url_for("products_by_user")
-        #)
+        data.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by_user")
+        )
+        data.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by_category")
+        )
 
         return Response(json.dumps(data), 200, mimetype=MASON)
 
@@ -858,8 +861,7 @@ class ProductsByUser(Resource):
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_products_all()
-        
-        
+
         #products_json = []
         #data["items"] = []
         for product in products:
@@ -873,7 +875,8 @@ class ProductsByUser(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            
+            item.add_control("item", api.url_for(ProductItem, product=item["name"]))
+            item.add_control("customer", api.url_for(UserItem, user=item["user_name"]))
             data["items"].append(item)
         
 
@@ -914,7 +917,8 @@ class ProductsByCategory(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            
+            item.add_control("item", api.url_for(ProductItem, product=product))
+            item.add_control("category", api.url_for(CategoryItem, category=category))
             data["items"].append(item)
 
 
@@ -974,7 +978,7 @@ class ReviewItem(Resource):
             "commercemeta:reviews-by",
             href=url_for("reviews_by", user=user)
         )
-
+        #print(user, username)
         return Response(json.dumps(data), 200, mimetype=MASON)
 
     def put(self, username, product):
@@ -1154,8 +1158,8 @@ class ReviewsByUser(Resource):
         if is_authorized != "authorized":
             return is_authorized
         
-        review_user = User.query.filter_by(name=user).first()
-        reviews = review_user.reviews
+        #review_user = User.query.filter_by(name=user).first()
+        reviews = User.query.filter_by(name=user).first().reviews
 
         cached_reviews = cache.get("reviews_all")
         if cached_reviews:
@@ -1165,8 +1169,7 @@ class ReviewsByUser(Resource):
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
-        data.add_control_reviews_add()
-        data.add_control_users_all()
+        data.add_control_reviews_all()
 
         #reviews = Review.query.all()
         #reviews_json = []
@@ -1181,7 +1184,8 @@ class ReviewsByUser(Resource):
                 # 'user': review.user.serialize(),
                 # 'product': review.product.serialize(),
             })
-
+            item.add_control("item", api.url_for(ReviewItem, username=item["user_name"], product=item["product_name"]))
+            item.add_control("customer", api.url_for(UserItem, user=user))
             data["items"].append(item)
 
         cache.set("reviews_all", data["items"])
@@ -1215,7 +1219,7 @@ class CategoryItem(Resource):
         cache.set("category_"+str(category.id), category.serialize())
 
         data = CommerceMetaBuilder(category.serialize())
-        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("profile", href=CATEGORY_PROFILE_URL)
         data.add_control("self", href=request.path)
         data.add_control("collection", href=api.url_for(CategoryCollection))
