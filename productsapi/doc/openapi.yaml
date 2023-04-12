@@ -1,0 +1,716 @@
+openapi: 3.0.3
+servers:
+  - url: /api
+components:
+  parameters:
+    user:
+      description: Selected user's unique name
+      in: path
+      name: user
+      required: true
+      schema:
+        type: string
+    product:
+      description: Selected product's unique name
+      in: path
+      name: product
+      required: true
+      schema:
+        type: string
+    review:
+      description: Selected review's unique name
+      in: path
+      name: review
+      required: true
+      schema:
+        type: string
+    category:
+      description: Selected category's unique name
+      in: path
+      name: category
+      required: true
+      schema:
+        type: string
+  schemas:
+    User:
+      properties:
+        avatar:
+          description: The url of the user's avatar
+          format: uri
+          maxLength: 256
+          minLength: 1
+          pattern: ^https?://
+          type: string
+          nullable: true
+        email:
+          description: User email
+          format: email
+          maxLength: 256
+          minLength: 1
+          type: string
+        name:
+          description: The user's name
+          maxLength: 256
+          minLength: 1
+          type: string
+        password:
+          description: User password
+          maxLength: 256
+          minLength: 6
+          type: string
+        role:
+          default: Customer
+          description: The user's role
+          enum:
+            - Customer
+            - Admin
+            - Seller
+          type: string
+      required:
+        - name
+        - role
+        - password
+        - email
+      type: object
+    Product:
+      properties:
+        categories:
+          description: An array of category names that this product belongs to
+          items:
+            type: string
+            maxLength: 256
+            minLength: 1
+          maxItems: 255
+          type: array
+          nullable: true
+        description:
+          description: Product description
+          maxLength: 65535
+          minLength: 1
+          type: string
+        images:
+          description: A list of product image urls
+          items:
+            format: uri
+            maxLength: 256
+            minLength: 1
+            pattern: ^https?://
+            type: string
+          maxItems: 255
+          type: array
+          nullable: true
+        name:
+          description: Product Name
+          maxLength: 256
+          minLength: 1
+          type: string
+        price:
+          description: Product Price
+          maximum: 100000
+          minimum: 1
+          type: number
+        user_name:
+          description: The user name of the user who created this product
+          maxLength: 256
+          minLength: 1
+          type: string
+      required:
+        - name
+        - price
+        - user_name
+      type: object
+    Review:
+      properties:
+        product_name:
+          description: The product name being reviewed
+          maxLength: 256
+          minLength: 1
+          type: string
+        rating:
+          description: The rating of the product by a user from 1 to 10
+          maximum: 10
+          minimum: 1
+          type: number
+        user_name:
+          description: The username of the reviewer
+          maxLength: 256
+          minLength: 1
+          type: string
+      required:
+        - rating
+        - product_name
+        - user_name
+      type: object
+    Category:
+      properties:
+        image:
+          description: A url for an image related to the category
+          format: uri
+          maxLength: 256
+          minLength: 1
+          pattern: ^https?://
+          type: string
+          nullable: true
+        name:
+          description: Category name
+          maxLength: 256
+          minLength: 1
+          type: string
+        product_names:
+          description: A list of product names related to the category
+          items:
+            maxLength: 256
+            minLength: 1
+            type: string
+          type: array
+      required:
+        - name
+      type: object
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: jwt
+info:
+  title: E-Commerce API
+  version: 1.0.0
+  description: >
+    E-Commerce API is a Python API for managing and retrieving information about
+    products, reviews, categories, and users in an online store.
+  contact:
+    url: https://github.com/Kirollos-Hanna/PWP
+    name: Maintainers
+  license:
+    name: GNU General Public License Version 3
+    url: https://github.com/Kirollos-Hanna/PWP/blob/main/LICENSE
+paths:
+  /users/:
+    get:
+      description: Get the list of users
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              example:
+                - name: Kalamies
+                  avatar: https://kalamies.com/profile_picture.png
+                  role: Seller
+                  password: password123
+                  email: kalamies@gmail.com
+                - name: Matti Meikäläinen
+                  avatar: NULL
+                  role: Customer
+                  password: "123456"
+                  email: matti.meikalainen@gmail.com
+        '401':
+          description: Not authorized
+    post:
+      description: Create an user
+      requestBody:
+        description: JSON document that contains data for a new user
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            example:
+              name: Kalamies
+              avatar: https://kalamies.com/profile_picture.png
+              role: Seller
+              password: password123
+              email: kalamies@gmail.com
+      responses:
+        '201':
+          description: Succesfully registered.
+          headers:
+            Location:
+              description: URI of the new user
+              schema:
+                type: string
+        '400':
+          description: Bad request, email address is not valid
+        '409':
+          description: Conflict, user or email already exists
+        '415':
+          description: Unsupported media type, content is not application/JSON
+  /users/{user}/:
+    parameters:
+      - $ref: '#/components/parameters/user'
+    get:
+      description: Get details of one user
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Data of a single user
+          content:
+            application/json:
+              examples:
+                user-without-avatar:
+                  description: A user whose role is seller and has no avatar
+                  value:
+                    name: Pekka Puupää
+                    avatar: null
+                    role: Seller
+                    password: asdasd123123
+                    email: pekka.puupaa@hotmail.com
+                user-with-avatar:
+                  description: A user whose role is customer and has an avatar
+                  value:
+                    name: Matti Meikäläinen
+                    avatar: https://mattishomepage.fi/picture.jpeg
+                    role: Customer
+                    password: kalakalakalakalakalakalaka
+                    email: matti.meikalainen@gmail.com
+        '401':
+          description: Not authorized
+        '404':
+          description: User not found
+    put:
+      description: Replace user's basic data with new values
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains new basic data for the user. Kalamies changes his password.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            example:
+              name: Kalamies
+              avatar: https://kalamies.com/profile_picture.png
+              role: Seller
+              password: kalamieskukaties
+              email: kalamies@gmail.com
+      responses:
+        '204':
+          description: User attributes succesfully udpated
+        '400':
+          description: Bad request, email address or user is not valid
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '409':
+          description: Cannot modify username, since it has references in other tables
+        '401':
+          description: Not authorized
+    delete:
+      description: Delete user
+      security:
+        - jwt: []
+      responses:
+        '204':
+          description: User account successfully deleted
+        '401':
+          description: Not authorized
+        '404':
+          description: User not found
+  /users/products/:
+    get:
+      description: Get a list of products by user
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: List of products by user
+          content:
+            application/json:
+              example:
+                - name: Fender Stratocaster
+                  images: https://www.fender.com/stratocaster.png/
+                  categories: ['Instruments', 'Electric guitars']
+                  description: A brand new electric guitar
+                  price: 1999.90
+                  user_name: Kalamies
+                - name: "1984"
+                  description: A book written by George Orwell
+                  price: 29.00
+                  user_name: Kalamies
+        '401':
+          description: Not authorized
+    post:
+      description: Add a product
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains data for a new product
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+            example:
+              name: Lenovo Thinkpad T420
+              description: An old refurbished business laptop
+              price: 149.90
+              user_name: Kalamies
+              categories: ['Electronics', 'Laptops']
+      responses:
+        '201':
+          description: Succesfully added.
+          headers:
+            Location:
+              description: URI of the new product
+              schema:
+                type: string
+        '400':
+          description: Bad request, email address or user is not valid
+        '409':
+          description: Conflict, product already exists
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '401':
+          description: Not authorized
+        
+  /categories/products/:
+    get:
+      description: Get a list of products by category
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: List of products by category
+          content:
+            application/json:
+              example:
+                - name: Adidas t-shirt
+                  description: Cool black Adidas shirt
+                  price: 29.99
+                  user_name: Pekka Puupää
+                  categories: ['Clothing']
+                - name: Nike sneakers
+                  description: Brand new Nike sneakers
+                  price: 49.99
+                  user_name: Matti Meikäläinen
+                  categories: ['Clothing']
+        '401':
+          description: Not authorized
+    post:
+      description: Add a product
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains data for a new product
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+            example:
+              name: Lenovo Thinkpad T420
+              description: An old refurbished business laptop
+              price: 149.90
+              user_name: Kalamies
+              categories: ['Electronics', 'Laptops']
+      responses:
+        '201':
+          description: Succesfully added.
+          headers:
+            Location:
+              description: URI of the new product
+              schema:
+                type: string
+        '400':
+          description: Bad request, email address or user is not valid
+        '409':
+          description: Conflict, product already exists
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '401':
+          description: Not authorized
+  /users/{user}/products/{product}/:
+    parameters:
+      - $ref: '#/components/parameters/product'
+      - $ref: '#/components/parameters/user'
+    get:
+      description: Get a product by user and product name
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Data of a single product
+          content:
+            application/json:
+              examples:
+                kalamies-guitar:
+                  description: User kalamies' Fender
+                  value:
+                    name: Fender Stratocaster
+                    images: https://www.fender.com/stratocaster.png
+                    categories: ['Instruments', 'Electric guitars']
+                    description: A brand new electric guitar
+                    price: 1999.90
+                    user_name: Kalamies
+        '401':
+          description: Not authorized
+        '404':
+          description: Product not found
+    put:
+      description: Replace products's basic data with new values
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains new basic data for the product. Kalamies changes his product's price.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+            example:
+                  name: Fender Stratocaster
+                  description: A brand new electric guitar, now with lowered price!
+                  price: 1499.99
+                  user_name: Kalamies
+      responses:
+        '204':
+          description: Product attributes succesfully udpated
+        '400':
+          description: This product doesn't exist in db
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '409':
+          description: Cannot update fields that are referenced in other tables.
+        '401':
+          description: Not authorized
+    delete:
+      description: Delete product
+      security:
+        - jwt: []
+      responses:
+        '204':
+          description: Product successfully deleted
+        '401':
+          description: Not authorized
+        '404':
+          description: Product not found
+  /users/reviews/:
+    get:
+      description: Get a list of reviews
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              example:
+                - rating: 9
+                  product_name: Fender Stratocaster
+                  user_name: Pekka Puupää
+                - rating: 6
+                  product_name: Nike sneakers
+                  user_name: Kalamies
+        '401':
+          description: Not authorized
+    post:
+      description: Add a review
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains data for a new review
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+            example:
+              rating: 0
+              product_name: Lenovo Thinkpad T420
+              user_name: Matti Meikäläinen
+      responses:
+        '201':
+          description: Succesfully added.
+          headers:
+            Location:
+              description: URI of the new review
+              schema:
+                type: string
+        '400':
+          description: Bad request, email address or user is not valid
+        '409':
+          description: Conflict, review already exists
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '401':
+          description: Not authorized
+  /users/{user}/reviews/{product}/:
+    parameters:
+      - $ref: '#/components/parameters/product'
+      - $ref: '#/components/parameters/user'
+    get:
+      description: Get a review by user and product name
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Data of a single review
+          content:
+            application/json:
+              examples:
+                review:
+                  description: A random review
+                  value:
+                    rating: 3
+                    product_name: Moccamaster
+                    user_name: Kalamies
+        '401':
+          description: Not authorized
+        '404':
+          description: Review not found
+    put:
+      description: Replace reviews's basic data with new values
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains new basic data for the review. Kalamies changes his reviews' rating.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+            example:
+                    rating: 6
+                    product_name: Moccamaster
+                    user_name: Kalamies
+      responses:
+        '204':
+          description: Review attributes succesfully udpated
+        '400':
+          description: This review doesn't exist in db
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '409':
+          description: Cannot update fields that are referenced in other tables.
+        '401':
+          description: Not authorized
+    delete:
+      description: Delete review
+      security:
+        - jwt: []
+      responses:
+        '204':
+          description: Review successfully deleted
+        '401':
+          description: Not authorized
+        '404':
+          description: Review not found
+  /categories/:
+    get:
+      description: Get a list of product categories
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              example:
+                - image: https://fender.com/guitar.png
+                  name: Electric guitars
+                  product_names: ['Fender Stratocaster', 'Gibson Les Paul', 'Fender Telecaster']
+                - image: https://somecoolclothing.com/image.png
+                  name: Clothing
+                  product_names: ['Nike sneakers', 'Adidas t-shirt']
+    post:
+      description: Add a category
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains data for a new category
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+            example:
+              name: Winter coats
+      responses:
+        '201':
+          description: Succesfully added.
+          headers:
+            Location:
+              description: URI of the new category
+              schema:
+                type: string
+        '400':
+          description: Bad request, email address or user is not valid
+        '409':
+          description: Conflict, category already exists
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '401':
+          description: Not authorized
+  /categories/{category}:
+    parameters:
+      - $ref: '#/components/parameters/category'
+    get:
+      description: Get a single category
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Data of a single category
+          content:
+            application/json:
+              examples:
+                review:
+                  description: A random category
+                  value:
+                    image: https://mypictures.com/books.png
+                    name: Books
+        '401':
+          description: Not authorized
+        '404':
+          description: Category not found
+    put:
+      description: Replace category's basic data with new values
+      security:
+        - jwt: []
+      requestBody:
+        description: JSON document that contains new basic data for the category. Admin changed the name of the category.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+            example:
+                    image: https://mypictures.com/books.png
+                    name: Horror books
+      responses:
+        '204':
+          description: Category attributes succesfully udpated
+        '400':
+          description: This category doesn't exist in db
+        '415':
+          description: Unsupported media type, content is not application/JSON
+        '409':
+          description: Cannot update fields that are referenced in other tables.
+        '401':
+          description: Not authorized
+    delete:
+      description: Delete category
+      security:
+        - jwt: []
+      responses:
+        '204':
+          description: Category successfully deleted
+        '401':
+          description: Not authorized
+        '404':
+          description: Category not found
+  /users/auth/:
+    post:
+      description: Authenticate user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: Successfully logged in
+        '500':
+          description: Error
+    delete:
+      description: Logout user
+      security:
+        - jwt: []
+      responses:
+        '200':
+          description: Successfully logged out
+        '401':
+          description: Not authorized
+        '403':
+          description: Provide a valid auth token
