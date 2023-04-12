@@ -195,21 +195,21 @@ class CommerceMetaBuilder(MasonBuilder):
     def add_control_products_all(self):
         self.add_control(
             "commercemeta:products-all",
-            api.url_for(ProductCollection),
+            url_for("products"),
             title ="all products"
         )
 
     def add_control_categories_all(self):
         self.add_control(
             "commercemeta:categories-all",
-            api.url_for(CategoryCollection),
+            url_for("categories"),
             title ="all categories"
         )
     
     def add_control_reviews_all(self):
         self.add_control(
             "commercemeta:reviews-all",
-            api.url_for(ReviewCollection),
+            url_for("reviews"),
             title ="all reviews"
         )
 
@@ -310,7 +310,7 @@ class UserItem(Resource):
         This view function fetches the information of the user. Individual
         users are looked up through a particular product and a username. 
         """
-        user = User.query.filter_by(name=user).first()
+        #user = User.query.filter_by(name=user).first()
         #if not user:
             #raise Conflict(description="User_name doesn't exist in db.")
         
@@ -333,10 +333,10 @@ class UserItem(Resource):
         data.add_control("collection", href=api.url_for(UserCollection))
         data.add_control_edit_user(user)
         data.add_control_delete_user(user)
-        data.add_control(
-            "commercemeta:products-by", 
-            href=url_for("products_by", user=user)
-        )
+        #data.add_control(
+            #"commercemeta:products-by", 
+            #href=url_for("products_by_user")
+        #)
         data.add_control(
             "commercemeta:reviews-by",
             href=url_for("reviews_by", user=user)
@@ -424,7 +424,7 @@ class UserCollection(Resource):
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_users), status=200)
         
-        data = CommerceMetaBuilder()
+        data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_users_add()
@@ -432,10 +432,10 @@ class UserCollection(Resource):
         data.add_control_reviews_all()
 
         users = User.query.all()
-        data["items"] = []
+        #data["items"] = []
         #users_json = []
         for user in users:
-            data["items"].append({
+            item = CommerceMetaBuilder({
                 'name': user.name,
                 'password': user.password,
                 'email': user.email,
@@ -444,6 +444,9 @@ class UserCollection(Resource):
                 # 'products': [product.serialize() for product in user.products],
                 # 'reviews': [review.serialize() for review in user.reviews]
             })
+            item.add_control("item", api.url_for(ProductItem, product=product))
+            data["items"].append(item)
+
         cache.set("users_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
                         response=json.dumps(data), status=200, mimetype=MASON)
@@ -601,17 +604,17 @@ class ProductItem(Resource):
         if is_authorized != "authorized":
             return is_authorized
         user = User.query.filter_by(name=username).first()
-        prod = Product.query.filter_by(name=product).first()
-        if not prod:
+        #prod = Product.query.filter_by(name=product).first()
+        if not product:
             raise Conflict(
                 description="This product doesn't exist in db."
             )
 
-        cached_product = cache.get("product_"+str(prod.id))
+        cached_product = cache.get("product_"+str(product.id))
         if cached_product:
             return cached_product
 
-        cache.set("product_"+str(prod.id), prod.serialize())
+        cache.set("product_"+str(product.id), product.serialize())
 
         data = CommerceMetaBuilder(product.serialize())
         data.add_namespace("mumeta", LINK_RELATIONS_URL)
@@ -620,10 +623,10 @@ class ProductItem(Resource):
         data.add_control("collection", href=api.url_for(ProductCollection))
         data.add_control_edit_product(product)
         data.add_control_delete_product(product)
-        data.add_control(
-            "commercemeta:products-by", 
-            href=url_for("products_by", user=user)
-        )
+        #data.add_control(
+            #"commercemeta:products-by", 
+            #href=url_for("products_by_user")
+        #)
 
         return Response(json.dumps(data), 200, mimetype=MASON)
 
@@ -715,18 +718,21 @@ class ProductCollection(Resource):
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_products), status=200)
         
-        data = CommerceMetaBuilder()
+        #user = User.query.all()
+        
+        data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_products_add()
         data.add_control_users_all()
         data.add_control_categories_all()
+        
 
         products = Product.query.all()
         #products_json = []
-        data["items"] = []
+        #data["items"] = []
         for product in products:
-            data["items"].append({
+            item = CommerceMetaBuilder({
                 'id': product.id,
                 'name': product.name,
                 'price': product.price,
@@ -736,6 +742,21 @@ class ProductCollection(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
+            #print(item["user_name"])
+            item.add_control("item", api.url_for(ProductItem, product=item["name"], username=item["user_name"]))
+            item.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by_user", user=item["user_name"])
+            )
+            item.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by_category", category=item["categories"][0]["name"])
+            )
+       
+            data["items"].append(item)
+        
+    
+       
         cache.set("products_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
                         response=json.dumps(data), status=200, mimetype=MASON)
@@ -818,6 +839,88 @@ class ProductCollection(Resource):
         response.headers['location'] = api_url
         response.status_code = 201
         return response
+
+class ProductsByUser(Resource):
+
+    def get(self, user):
+
+        product_user = User.query.filter_by(name=user).first()
+        products = product_user.products
+
+        cached_products = cache.get("products_all")
+        if cached_products:
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_products), status=200)
+        
+        #user = User.query.all()
+        
+        data = CommerceMetaBuilder(items=[])
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_products_all()
+        
+        
+        #products_json = []
+        #data["items"] = []
+        for product in products:
+            item = CommerceMetaBuilder({
+                'id': product.id,
+                'name': product.name,
+                'price': product.price,
+                'description': product.description,
+                'images': json.loads(product.images) if product.images else None,
+                'user_name': product.user_name,
+                'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
+                'categories': [category.serialize(long=False) for category in product.categories],
+            })
+            
+            data["items"].append(item)
+        
+
+        cache.set("products_all", data["items"])
+        return Response(headers={"Content-Type": "application/json"},
+                        response=json.dumps(data), status=200, mimetype=MASON)
+
+
+class ProductsByCategory(Resource):
+
+    def get(self, category):
+
+        product_category = Category.query.filter_by(name=category).first()
+        products = product_category.products
+
+        cached_products = cache.get("products_all")
+        if cached_products:
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_products), status=200)
+        
+        #user = User.query.all()
+        
+        data = CommerceMetaBuilder(items=[])
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_products_all()
+        
+        #products_json = []
+        #data["items"] = []
+        for product in products:
+            item = CommerceMetaBuilder({
+                'id': product.id,
+                'name': product.name,
+                'price': product.price,
+                'description': product.description,
+                'images': json.loads(product.images) if product.images else None,
+                'user_name': product.user_name,
+                'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
+                'categories': [category.serialize(long=False) for category in product.categories],
+            })
+            
+            data["items"].append(item)
+
+
+        cache.set("products_all", data["items"])
+        return Response(headers={"Content-Type": "application/json"},
+                        response=json.dumps(data), status=200, mimetype=MASON)
 
 
 class ReviewItem(Resource):
@@ -951,18 +1054,19 @@ class ReviewCollection(Resource):
         """
         This function is used to look up all reviews in the db.
         """
-        
+    
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         
+
         cached_reviews = cache.get("reviews_all")
         if cached_reviews:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_reviews), status=200)
         
-        data = CommerceMetaBuilder()
+        data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_reviews_add()
@@ -970,9 +1074,9 @@ class ReviewCollection(Resource):
 
         reviews = Review.query.all()
         #reviews_json = []
-        data["items"] = []
+        #data["items"] = []
         for review in reviews:
-            data["items"].append({
+            item = CommerceMetaBuilder({
                 'id': review.id,
                 'description': review.description,
                 'rating': review.rating,
@@ -981,12 +1085,19 @@ class ReviewCollection(Resource):
                 # 'user': review.user.serialize(),
                 # 'product': review.product.serialize(),
             })
+            item.add_control("item", api.url_for(ReviewItem, product=item["product_name"], username=item["user_name"]))
+            item.add_control(
+            "commercemeta:reviews-by", 
+            href=url_for("reviews_by", user=item["user_name"])
+            )
+            data["items"].append(item)
+
         cache.set("reviews_all", data["items"])
         return Response(
             headers={"Content-Type": "application/json"},
             response=json.dumps(data),
             status=200, mimetype=MASON
-        )
+        )  
 
     def post(self):
         """
@@ -1034,6 +1145,52 @@ class ReviewCollection(Resource):
         response.status_code = 201
         return response
 
+class ReviewsByUser(Resource):
+    def get(self, user):
+      
+
+        auth_header = request.headers.get('Authorization')
+        is_authorized = authorizeUser(auth_header)
+        if is_authorized != "authorized":
+            return is_authorized
+        
+        review_user = User.query.filter_by(name=user).first()
+        reviews = review_user.reviews
+
+        cached_reviews = cache.get("reviews_all")
+        if cached_reviews:
+            return Response(headers={"Content-Type": "application/json"},
+                            response=json.dumps(cached_reviews), status=200)
+        
+        data = CommerceMetaBuilder(items=[])
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_reviews_add()
+        data.add_control_users_all()
+
+        #reviews = Review.query.all()
+        #reviews_json = []
+        #data["items"] = []
+        for review in reviews:
+            item = CommerceMetaBuilder({
+                'id': review.id,
+                'description': review.description,
+                'rating': review.rating,
+                'user_name': review.user_name,
+                'product_name': review.product_name,
+                # 'user': review.user.serialize(),
+                # 'product': review.product.serialize(),
+            })
+
+            data["items"].append(item)
+
+        cache.set("reviews_all", data["items"])
+        return Response(
+            headers={"Content-Type": "application/json"},
+            response=json.dumps(data),
+            status=200, mimetype=MASON
+        )  
+        
 
 class CategoryItem(Resource):
     """
@@ -1064,10 +1221,10 @@ class CategoryItem(Resource):
         data.add_control("collection", href=api.url_for(CategoryCollection))
         data.add_control_edit_category(category)
         data.add_control_delete_category (category)
-        data.add_control(
-            "commercemeta:products-by", 
-            href=url_for("products_by", category=category)
-        )
+        #data.add_control(
+            #"commercemeta:products-by", 
+            #href=url_for("products_by_category", category=category)
+        #)
 
         return Response(json.dumps(data), 200, mimetype=MASON)
     
@@ -1136,22 +1293,25 @@ class CategoryCollection(Resource):
                             response=json.dumps(cached_categories), status=200)
         
 
-        data = CommerceMetaBuilder()
+        data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_categories_add()
         data.add_control_products_all()
 
         categories = Category.query.all()
-        category_json = []
+        #category_json = []
         data["items"] = []
         for category in categories:
-            data["items"].append({
+            item = CommerceMetaBuilder({
                 'id': category.id,
                 'name': category.name,
                 'image': category.image,
                 # 'products': [product.serialize(long=False) for product in category.products]
             })
+            item.add_control("item", api.url_for(CategoryItem, category=category))
+            data["items"].append(item)
+
         cache.set("categories_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
                         response=json.dumps(data), status=200, mimetype=MASON)
@@ -1208,9 +1368,11 @@ api.add_resource(ProductCollection,
                  "/api/users/products/",
                  "/api/categories/products/"
                  , endpoint="products")
-api.add_resource(ProductCollection, "/api/users/<username>/products/", endpoint="products_by")
+api.add_resource(ProductsByUser, "/api/users/<user>/products/", endpoint="products_by_user")
+api.add_resource(ProductsByCategory, "/api/categories/<category>/products/", endpoint="products_by_category")
 api.add_resource(ReviewItem, "/api/users/<username>/reviews/<product>/", endpoint="review")
 api.add_resource(ReviewCollection, "/api/users/reviews/", endpoint="reviews")
-api.add_resource(ReviewCollection, "/api/users/<user:user>/reviews/", endpoint="reviews_by")
+api.add_resource(ReviewsByUser, "/api/users/<user>/reviews/", endpoint="reviews_by")
 api.add_resource(CategoryItem, "/api/categories/<category:category>/", endpoint="category")
 api.add_resource(CategoryCollection, "/api/categories/", endpoint="categories")
+
