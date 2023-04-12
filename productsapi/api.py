@@ -1,5 +1,5 @@
 import json
-from flask import Response, request, make_response, jsonify
+from flask import Response, request, make_response, jsonify, url_for
 from flask_restful import Api, Resource
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Conflict, BadRequest, UnsupportedMediaType
@@ -12,6 +12,15 @@ from validate_email import validate_email
 api = Api()
 
 cache = Cache(config={'CACHE_TYPE': 'simple', "CACHE_DEFAULT_TIMEOUT": 300})
+
+MASON = "application/vnd.mason+json"
+ERROR_PROFILE = "/profiles/error/"
+LINK_RELATIONS_URL = "/commercemeta/link-relations#"
+
+USER_PROFILE_URL = "/profiles/user/"
+PRODUCT_PROFILE_URL = "/profiles/product/"
+CATEGORY_PROFILE_URL = "/profiles/category/"
+REVIEW_PROFILE_URL = "/profiles/review/"
 
 # HELPER FUNCTIONS
 
@@ -40,6 +49,7 @@ def authorizeUser(auth_header):
             response.status_code = 401
             return response
         else:
+            
             return "authorized"
     else:
         responseObject = {
@@ -49,6 +59,244 @@ def authorizeUser(auth_header):
         response = jsonify(responseObject)
         response.status_code = 401
         return response
+    
+
+class MasonBuilder(dict):
+    """
+    A convenience class for managing dictionaries that represent Mason
+    objects. It provides nice shorthands for inserting some of the more
+    elements into the object but mostly is just a parent for the much more
+    useful subclass defined next. This class is generic in the sense that it
+    does not contain any application specific implementation details.
+    """
+
+    def add_error(self, title, details):
+        """
+        Adds an error element to the object. Should only be used for the root
+        object, and only in error scenarios.
+
+        Note: Mason allows more than one string in the @messages property (it's
+        in fact an array). However we are being lazy and supporting just one
+        message.
+
+        : param str title: Short title for the error
+        : param str details: Longer human-readable description
+        """
+
+        self["@error"] = {
+            "@message": title,
+            "@messages": [details],
+        }
+
+    def add_namespace(self, ns, uri):
+        """
+        Adds a namespace element to the object. A namespace defines where our
+        link relations are coming from. The URI can be an address where
+        developers can find information about our link relations.
+
+        : param str ns: the namespace prefix
+        : param str uri: the identifier URI of the namespace
+        """
+
+        if "@namespaces" not in self:
+            self["@namespaces"] = {}
+
+        self["@namespaces"][ns] = {
+            "name": uri
+        }
+
+    def add_control(self, ctrl_name, href, **kwargs):
+        """
+        Adds a control property to an object. Also adds the @controls property
+        if it doesn't exist on the object yet. Technically only certain
+        properties are allowed for kwargs but again we're being lazy and don't
+        perform any checking.
+
+        The allowed properties can be found from here
+        https://github.com/JornWildt/Mason/blob/master/Documentation/Mason-draft-2.md
+
+        : param str ctrl_name: name of the control (including namespace if any)
+        : param str href: target URI for the control
+        """
+
+        if "@controls" not in self:
+            self["@controls"] = {}
+
+        self["@controls"][ctrl_name] = kwargs
+        self["@controls"][ctrl_name]["href"] = href
+
+    def add_control_post(self, ctrl_name, title, href, schema):
+        """
+        Utility method for adding POST type controls. The control is
+        constructed from the method's parameters. Method and encoding are
+        fixed to "POST" and "json" respectively.
+        
+        : param str ctrl_name: name of the control (including namespace if any)
+        : param str href: target URI for the control
+        : param str title: human-readable title for the control
+        : param dict schema: a dictionary representing a valid JSON schema
+        """
+    
+        self.add_control(
+            ctrl_name,
+            href,
+            method="POST",
+            encoding="json",
+            title=title,
+            schema=schema
+        )
+
+    def add_control_put(self, title, href, schema):
+        """
+        Utility method for adding PUT type controls. The control is
+        constructed from the method's parameters. Control name, method and
+        encoding are fixed to "edit", "PUT" and "json" respectively.
+        
+        : param str href: target URI for the control
+        : param str title: human-readable title for the control
+        : param dict schema: a dictionary representing a valid JSON schema
+        """
+
+        self.add_control(
+            "edit",
+            href,
+            method="PUT",
+            encoding="json",
+            title=title,
+            schema=schema
+        )
+        
+    def add_control_delete(self, title, href):
+        """
+        Utility method for adding PUT type controls. The control is
+        constructed from the method's parameters. Control method is fixed to
+        "DELETE", and control's name is read from the class attribute
+        *DELETE_RELATION* which needs to be overridden by the child class.
+
+        : param str href: target URI for the control
+        : param str title: human-readable title for the control
+        """
+        
+        self.add_control(
+            "commercemeta:delete",
+            href,
+            method="DELETE",
+            title=title,
+        )
+
+class CommerceMetaBuilder(MasonBuilder):
+    def add_control_users_all(self):
+        self.add_control(
+            "commercemeta:users-all",
+            api.url_for(UserCollection),
+            title ="all users"
+        )
+
+    def add_control_products_all(self):
+        self.add_control(
+            "commercemeta:products-all",
+            api.url_for(ProductCollection),
+            title ="all products"
+        )
+
+    def add_control_categories_all(self):
+        self.add_control(
+            "commercemeta:categories-all",
+            api.url_for(CategoryCollection),
+            title ="all categories"
+        )
+    
+    def add_control_reviews_all(self):
+        self.add_control(
+            "commercemeta:reviews-all",
+            api.url_for(ReviewCollection),
+            title ="all reviews"
+        )
+
+    def add_control_users_add(self):
+        self.add_control_post(
+            "commercemeta:add-user",
+            title ="add new user",
+            href=api.url_for(UserCollection),
+            schema=User.json_schema()
+        )
+
+    def add_control_products_add(self):
+        self.add_control_post(
+            "commercemeta:add-product",
+            title ="add new product",
+            href=api.url_for(ProductCollection),
+            schema=Product.json_schema()
+        )
+
+    def add_control_categories_add(self):
+        self.add_control_post(
+            "commercemeta:add-category",
+            title ="add new category",
+            href=api.url_for(CategoryCollection),
+            schema=Category.json_schema()
+        )
+
+    def add_control_reviews_add(self):
+        self.add_control_post(
+            "commercemeta:add-review",
+            title ="add new review",
+            href=api.url_for(ReviewCollection),
+            schema=Review.json_schema()
+        )
+
+    def add_control_edit_user(self, user):
+        self.add_control_put(
+           "edit",
+           api.url_for(UserItem, user=user),
+           User.json_schema() 
+        )
+
+    def add_control_edit_product(self, product):
+        self.add_control_put(
+           "edit",
+           api.url_for(ProductItem, product=product),
+           Product.json_schema() 
+        )
+
+    def add_control_edit_category(self, category):
+        self.add_control_put(
+           "edit",
+           api.url_for(CategoryItem, category=category),
+           Category.json_schema() 
+        )
+
+    def add_control_edit_review(self, review):
+        self.add_control_put(
+           "edit",
+           api.url_for(ReviewItem, review=review),
+           Review.json_schema() 
+        )
+
+    def add_control_delete_user(self, user):
+        self.add_control_delete(
+            "commercemeta:delete",
+            api.url_for(UserItem, user=user),           
+        )
+
+    def add_control_delete_product(self, product):
+        self.add_control_delete(
+            "commercemeta:delete",
+            api.url_for(ProductItem, product=product),    
+        )
+    
+    def add_control_delete_category(self, category):
+        self.add_control_delete(
+            "commercemeta:delete",
+            api.url_for(CategoryItem, category=category),    
+        )
+
+    def add_control_delete_review(self, review):
+        self.add_control_delete(
+            "commercemeta:delete",
+            api.url_for(ReviewItem, review=review),    
+        )
+
 
 class UserItem(Resource):
     """
@@ -62,7 +310,7 @@ class UserItem(Resource):
         This view function fetches the information of the user. Individual
         users are looked up through a particular product and a username. 
         """
-        #user = User.query.filter_by(name=user).first()
+        user = User.query.filter_by(name=user).first()
         #if not user:
             #raise Conflict(description="User_name doesn't exist in db.")
         
@@ -70,11 +318,32 @@ class UserItem(Resource):
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
+        
         cached_user = cache.get("user_"+str(user.id))
         if cached_user:
             return cached_user
+        
         cache.set("user_"+str(user.id), user.serialize())
-        return user.serialize()
+
+        data = CommerceMetaBuilder(user.serialize())
+        #print(data)
+        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_control("profile", href=USER_PROFILE_URL)
+        data.add_control("self", href=request.path)
+        data.add_control("collection", href=api.url_for(UserCollection))
+        data.add_control_edit_user(user)
+        data.add_control_delete_user(user)
+        data.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by", user=user)
+        )
+        data.add_control(
+            "commercemeta:reviews-by",
+            href=url_for("reviews_by", user=user)
+        )
+
+
+        return Response(json.dumps(data), 200, mimetype=MASON)
 
     def put(self, user):
         """
@@ -145,6 +414,7 @@ class UserCollection(Resource):
         """
         # get the auth token
         auth_header = request.headers.get('Authorization')
+        #print(auth_header)
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
@@ -153,10 +423,19 @@ class UserCollection(Resource):
         if cached_users:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_users), status=200)
+        
+        data = CommerceMetaBuilder()
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_users_add()
+        data.add_control_products_all()
+        data.add_control_reviews_all()
+
         users = User.query.all()
-        users_json = []
+        data["items"] = []
+        #users_json = []
         for user in users:
-            users_json.append({
+            data["items"].append({
                 'name': user.name,
                 'password': user.password,
                 'email': user.email,
@@ -165,9 +444,9 @@ class UserCollection(Resource):
                 # 'products': [product.serialize() for product in user.products],
                 # 'reviews': [review.serialize() for review in user.reviews]
             })
-        cache.set("users_all", users_json)
+        cache.set("users_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
-                        response=json.dumps(users_json), status=200)
+                        response=json.dumps(data), status=200, mimetype=MASON)
 
     def post(self):
         """
@@ -235,6 +514,7 @@ class UserAuth(Resource):
                 email=post_data.get('email')
               ).first()
             auth_token = user.encode_auth_token(user.name)
+            
             if auth_token:
                 responseObject = {
                     'status': 'success',
@@ -332,7 +612,20 @@ class ProductItem(Resource):
             return cached_product
 
         cache.set("product_"+str(prod.id), prod.serialize())
-        return prod.serialize()
+
+        data = CommerceMetaBuilder(product.serialize())
+        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_control("profile", href=PRODUCT_PROFILE_URL)
+        data.add_control("self", href=request.path)
+        data.add_control("collection", href=api.url_for(ProductCollection))
+        data.add_control_edit_product(product)
+        data.add_control_delete_product(product)
+        data.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by", user=user)
+        )
+
+        return Response(json.dumps(data), 200, mimetype=MASON)
 
     def put(self, username, product):
         """
@@ -421,10 +714,19 @@ class ProductCollection(Resource):
         if cached_products:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_products), status=200)
+        
+        data = CommerceMetaBuilder()
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_products_add()
+        data.add_control_users_all()
+        data.add_control_categories_all()
+
         products = Product.query.all()
-        products_json = []
+        #products_json = []
+        data["items"] = []
         for product in products:
-            products_json.append({
+            data["items"].append({
                 'id': product.id,
                 'name': product.name,
                 'price': product.price,
@@ -434,9 +736,9 @@ class ProductCollection(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-        cache.set("products_all", products_json)
+        cache.set("products_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
-                        response=json.dumps(products_json), status=200)
+                        response=json.dumps(data), status=200, mimetype=MASON)
 
     def post(self):
         """
@@ -474,9 +776,9 @@ class ProductCollection(Resource):
                     request.json['images']) if 'images' in request.json else None,
                 user=user
             )
+            
             if categories:
                 product.categories = categories
-
             db.session.add(product)
             db.session.commit()
             cache.set("product_"+str(product.id), product.serialize())
@@ -557,7 +859,20 @@ class ReviewItem(Resource):
                 description="This review doesn't exist in db."
             )
         cache.set("review_"+str(review.id), review.serialize())
-        return review.serialize()
+
+        data = CommerceMetaBuilder(review.serialize())
+        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_control("profile", href=REVIEW_PROFILE_URL)
+        data.add_control("self", href=request.path)
+        data.add_control("collection", href=api.url_for(ReviewCollection))
+        data.add_control_edit_review(review)
+        data.add_control_delete_review(review)
+        data.add_control(
+            "commercemeta:reviews-by",
+            href=url_for("reviews_by", user=user)
+        )
+
+        return Response(json.dumps(data), 200, mimetype=MASON)
 
     def put(self, username, product):
         """
@@ -646,10 +961,18 @@ class ReviewCollection(Resource):
         if cached_reviews:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_reviews), status=200)
+        
+        data = CommerceMetaBuilder()
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_reviews_add()
+        data.add_control_users_all()
+
         reviews = Review.query.all()
-        reviews_json = []
+        #reviews_json = []
+        data["items"] = []
         for review in reviews:
-            reviews_json.append({
+            data["items"].append({
                 'id': review.id,
                 'description': review.description,
                 'rating': review.rating,
@@ -658,11 +981,11 @@ class ReviewCollection(Resource):
                 # 'user': review.user.serialize(),
                 # 'product': review.product.serialize(),
             })
-        cache.set("reviews_all", reviews_json)
+        cache.set("reviews_all", data["items"])
         return Response(
             headers={"Content-Type": "application/json"},
-            response=json.dumps(reviews_json),
-            status=200
+            response=json.dumps(data),
+            status=200, mimetype=MASON
         )
 
     def post(self):
@@ -733,8 +1056,21 @@ class CategoryItem(Resource):
         if cached_category:
             return cached_category
         cache.set("category_"+str(category.id), category.serialize())
-        return category.serialize()
 
+        data = CommerceMetaBuilder(category.serialize())
+        data.add_namespace("mumeta", LINK_RELATIONS_URL)
+        data.add_control("profile", href=CATEGORY_PROFILE_URL)
+        data.add_control("self", href=request.path)
+        data.add_control("collection", href=api.url_for(CategoryCollection))
+        data.add_control_edit_category(category)
+        data.add_control_delete_category (category)
+        data.add_control(
+            "commercemeta:products-by", 
+            href=url_for("products_by", category=category)
+        )
+
+        return Response(json.dumps(data), 200, mimetype=MASON)
+    
     def put(self, category):
         """
         This function is used to modify an existing category. Data for 
@@ -798,18 +1134,27 @@ class CategoryCollection(Resource):
         if cached_categories:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_categories), status=200)
+        
+
+        data = CommerceMetaBuilder()
+        data.add_namespace("commercemeta", LINK_RELATIONS_URL)
+        data.add_control("self", href=request.path)
+        data.add_control_categories_add()
+        data.add_control_products_all()
+
         categories = Category.query.all()
         category_json = []
+        data["items"] = []
         for category in categories:
-            category_json.append({
+            data["items"].append({
                 'id': category.id,
                 'name': category.name,
                 'image': category.image,
                 # 'products': [product.serialize(long=False) for product in category.products]
             })
-        cache.set("categories_all", category_json)
+        cache.set("categories_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
-                        response=json.dumps(category_json), status=200)
+                        response=json.dumps(data), status=200, mimetype=MASON)
 
     def post(self):
         """
@@ -856,14 +1201,16 @@ class CategoryCollection(Resource):
 # Routing resources
 
 api.add_resource(UserAuth, "/api/users/auth/")
-api.add_resource(UserItem, "/api/users/<user:user>/")
-api.add_resource(UserCollection, "/api/users/")
-api.add_resource(ProductItem, "/api/users/<username>/products/<product>/")
+api.add_resource(UserItem, "/api/users/<user:user>/", endpoint="user")
+api.add_resource(UserCollection, "/api/users/", endpoint="users")
+api.add_resource(ProductItem, "/api/users/<username>/products/<product>/", endpoint="product")
 api.add_resource(ProductCollection,
                  "/api/users/products/",
                  "/api/categories/products/"
-                 )
-api.add_resource(ReviewItem, "/api/users/<username>/reviews/<product>/")
-api.add_resource(ReviewCollection, "/api/users/reviews/")
-api.add_resource(CategoryItem, "/api/categories/<category:category>/")
-api.add_resource(CategoryCollection, "/api/categories/")
+                 , endpoint="products")
+api.add_resource(ProductCollection, "/api/users/<username>/products/", endpoint="products_by")
+api.add_resource(ReviewItem, "/api/users/<username>/reviews/<product>/", endpoint="review")
+api.add_resource(ReviewCollection, "/api/users/reviews/", endpoint="reviews")
+api.add_resource(ReviewCollection, "/api/users/<user:user>/reviews/", endpoint="reviews_by")
+api.add_resource(CategoryItem, "/api/categories/<category:category>/", endpoint="category")
+api.add_resource(CategoryCollection, "/api/categories/", endpoint="categories")
