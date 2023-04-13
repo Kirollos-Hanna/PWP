@@ -297,7 +297,6 @@ class CommerceMetaBuilder(MasonBuilder):
             api.url_for(ReviewItem, username=username, product=product),    
         )
 
-
 class UserItem(Resource):
     """
     This class includes the information of an individual user. 
@@ -721,16 +720,12 @@ class ProductCollection(Resource):
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_products), status=200)
         
-        #user = User.query.all()
-        
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_products_add()
         data.add_control_users_all()
-        data.add_control_categories_all()
-        
-
+        data.add_control_categories_all() 
         products = Product.query.all()
         #products_json = []
         #data["items"] = []
@@ -850,10 +845,10 @@ class ProductsByUser(Resource):
         product_user = User.query.filter_by(name=user).first()
         products = product_user.products
 
-        cached_products = cache.get("products_all")
-        if cached_products:
-            return Response(headers={"Content-Type": "application/json"},
-                            response=json.dumps(cached_products), status=200)
+        #cached_products = cache.get("products_all")
+        #if cached_products:
+            #return Response(headers={"Content-Type": "application/json"},
+                            #response=json.dumps(cached_products), status=200)
         
         #user = User.query.all()
         
@@ -892,13 +887,11 @@ class ProductsByCategory(Resource):
         product_category = Category.query.filter_by(name=category).first()
         products = product_category.products
 
-        cached_products = cache.get("products_all")
-        if cached_products:
-            return Response(headers={"Content-Type": "application/json"},
-                            response=json.dumps(cached_products), status=200)
-        
-        #user = User.query.all()
-        
+        #cached_products = cache.get("products_all")
+        #if cached_products:
+            #return Response(headers={"Content-Type": "application/json"},
+                            #response=json.dumps(cached_products), status=200)
+        #user = User.query.all()  
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
@@ -917,8 +910,8 @@ class ProductsByCategory(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            item.add_control("item", api.url_for(ProductItem, product=product))
-            item.add_control("category", api.url_for(CategoryItem, category=category))
+            item.add_control("item", api.url_for(ProductItem, username=item["user_name"], product=item["name"]))
+            item.add_control("category", api.url_for(CategoryItem, category=item["categories"]))
             data["items"].append(item)
 
 
@@ -1031,8 +1024,7 @@ class ReviewItem(Resource):
     def delete(self, username, product):
         """
         This function is used to delete reviews from the db.
-        """
-        
+        """    
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1063,13 +1055,10 @@ class ReviewCollection(Resource):
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
-        
-
         cached_reviews = cache.get("reviews_all")
         if cached_reviews:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_reviews), status=200)
-        
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
@@ -1120,14 +1109,13 @@ class ReviewCollection(Resource):
             validate(request.json, Review.json_schema())
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v))
-
+            
         user = User.query.filter_by(
             name=request.json['user_name']).first()
         product = Product.query.filter_by(
             name=request.json['product_name']).first()
         if user is None or product is None:
             return Response("User or product not found in the db", status=409)
-
         try:
             review = Review(
                 description=request.json['description'] if 'description' in
@@ -1161,16 +1149,14 @@ class ReviewsByUser(Resource):
         #review_user = User.query.filter_by(name=user).first()
         reviews = User.query.filter_by(name=user).first().reviews
 
-        cached_reviews = cache.get("reviews_all")
-        if cached_reviews:
-            return Response(headers={"Content-Type": "application/json"},
-                            response=json.dumps(cached_reviews), status=200)
-        
+        #cached_reviews = cache.get("reviews_all")
+        #if cached_reviews:
+            #return Response(headers={"Content-Type": "application/json"},
+                            #response=json.dumps(cached_reviews), status=200)
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_reviews_all()
-
         #reviews = Review.query.all()
         #reviews_json = []
         #data["items"] = []
@@ -1229,7 +1215,6 @@ class CategoryItem(Resource):
             #"commercemeta:products-by", 
             #href=url_for("products_by_category", category=category)
         #)
-
         return Response(json.dumps(data), 200, mimetype=MASON)
     
     def put(self, category):
@@ -1257,13 +1242,12 @@ class CategoryItem(Resource):
                 raise BadRequest(description="Product names do not exist")
             else:
                 category.products = products
-
         db.session.add(category)
         db.session.commit()
         cache.set("category_"+str(category.id), category.serialize())
         cache.delete("categories_all")
         return Response(status=204)
-
+    
     def delete(self, category):
         """
         This function can be used to delete a category.
@@ -1277,8 +1261,6 @@ class CategoryItem(Resource):
         db.session.commit()
         cache.delete("categories_all")
         return Response(status=204)
-
-
 class CategoryCollection(Resource):
     """
     This class includes the requests for all categories. This class can be 
@@ -1295,14 +1277,11 @@ class CategoryCollection(Resource):
         if cached_categories:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_categories), status=200)
-        
-
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_categories_add()
         data.add_control_products_all()
-
         categories = Category.query.all()
         #category_json = []
         data["items"] = []
@@ -1319,7 +1298,6 @@ class CategoryCollection(Resource):
         cache.set("categories_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
                         response=json.dumps(data), status=200, mimetype=MASON)
-
     def post(self):
         """
         This function is used to create new categories. The data for the new
@@ -1327,8 +1305,7 @@ class CategoryCollection(Resource):
         further parameter information.
         """
         if request.content_type != 'application/json':
-            raise UnsupportedMediaType
-        
+            raise UnsupportedMediaType        
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1342,8 +1319,7 @@ class CategoryCollection(Resource):
             products = Product.query.filter(
                 Product.name.in_(request.json['product_names'])).all()
             if not products:
-                raise BadRequest(description="Product names do not exist")
-
+               raise BadRequest(description="Product names do not exist")
         try:
             category = Category(
                 name=request.json['name'],
@@ -1379,4 +1355,3 @@ api.add_resource(ReviewCollection, "/api/users/reviews/", endpoint="reviews")
 api.add_resource(ReviewsByUser, "/api/users/<user>/reviews/", endpoint="reviews_by")
 api.add_resource(CategoryItem, "/api/categories/<category:category>/", endpoint="category")
 api.add_resource(CategoryCollection, "/api/categories/", endpoint="categories")
-
