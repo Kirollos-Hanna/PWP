@@ -533,7 +533,7 @@ class UserAuth(Resource):
                 'message': 'Try again'
             }
             response = make_response(jsonify(responseObject))
-            response.status_code = 500
+            response.status_code = 401
             return response
         
     def delete(self):
