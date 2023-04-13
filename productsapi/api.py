@@ -850,10 +850,10 @@ class ProductsByUser(Resource):
         product_user = User.query.filter_by(name=user).first()
         products = product_user.products
 
-        cached_products = cache.get("products_all")
-        if cached_products:
-            return Response(headers={"Content-Type": "application/json"},
-                            response=json.dumps(cached_products), status=200)
+        #cached_products = cache.get("products_all")
+        #if cached_products:
+            #return Response(headers={"Content-Type": "application/json"},
+                            #response=json.dumps(cached_products), status=200)
         
         #user = User.query.all()
         
@@ -892,10 +892,10 @@ class ProductsByCategory(Resource):
         product_category = Category.query.filter_by(name=category).first()
         products = product_category.products
 
-        cached_products = cache.get("products_all")
-        if cached_products:
-            return Response(headers={"Content-Type": "application/json"},
-                            response=json.dumps(cached_products), status=200)
+        #cached_products = cache.get("products_all")
+        #if cached_products:
+            #return Response(headers={"Content-Type": "application/json"},
+                            #response=json.dumps(cached_products), status=200)
         
         #user = User.query.all()
         
@@ -917,8 +917,8 @@ class ProductsByCategory(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            item.add_control("item", api.url_for(ProductItem, product=product))
-            item.add_control("category", api.url_for(CategoryItem, category=category))
+            item.add_control("item", api.url_for(ProductItem, username=item["user_name"], product=item["name"]))
+            item.add_control("category", api.url_for(CategoryItem, category=item["categories"]))
             data["items"].append(item)
 
 
@@ -1161,10 +1161,10 @@ class ReviewsByUser(Resource):
         #review_user = User.query.filter_by(name=user).first()
         reviews = User.query.filter_by(name=user).first().reviews
 
-        cached_reviews = cache.get("reviews_all")
-        if cached_reviews:
-            return Response(headers={"Content-Type": "application/json"},
-                            response=json.dumps(cached_reviews), status=200)
+        #cached_reviews = cache.get("reviews_all")
+        #if cached_reviews:
+            #return Response(headers={"Content-Type": "application/json"},
+                            #response=json.dumps(cached_reviews), status=200)
         
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
@@ -1379,4 +1379,6 @@ api.add_resource(ReviewCollection, "/api/users/reviews/", endpoint="reviews")
 api.add_resource(ReviewsByUser, "/api/users/<user>/reviews/", endpoint="reviews_by")
 api.add_resource(CategoryItem, "/api/categories/<category:category>/", endpoint="category")
 api.add_resource(CategoryCollection, "/api/categories/", endpoint="categories")
+
+
 
