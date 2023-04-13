@@ -29,6 +29,6 @@ class CategoryConverter(BaseConverter):
             raise NotFound
         return db_category
     def to_url(self, db_category):
-        return db_category[0]["name"]
+        return db_category.name
 
 
