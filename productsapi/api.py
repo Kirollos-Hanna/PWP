@@ -623,7 +623,7 @@ class ProductItem(Resource):
         data.add_control_delete_product(username, product)
         data.add_control(
             "commercemeta:products-by", 
-            href=url_for("products_by_user", user=username)
+            href=url_for("products_by_user", user=prod.user_name)
         )
         data.add_control(
             "commercemeta:products-by", 
