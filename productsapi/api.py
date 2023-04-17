@@ -911,7 +911,7 @@ class ProductsByCategory(Resource):
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
             item.add_control("item", api.url_for(ProductItem, username=item["user_name"], product=item["name"]))
-            item.add_control("category", api.url_for(CategoryItem, category=item["categories"]))
+            item.add_control("category", api.url_for(CategoryItem, category=Category.query.filter_by(name=item["categories"][0]["name"]).first()))
             data["items"].append(item)
 
 
