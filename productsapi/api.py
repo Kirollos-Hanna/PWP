@@ -627,7 +627,7 @@ class ProductItem(Resource):
         )
         data.add_control(
             "commercemeta:products-by", 
-            href=url_for("products_by_category", category=prod.categories)
+            href=url_for("products_by_category", category=prod.categories[0].name)
         )
 
         return Response(json.dumps(data), 200, mimetype=MASON)
