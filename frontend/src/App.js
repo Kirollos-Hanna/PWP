@@ -159,11 +159,6 @@ const Authorization = (props) => {
       <input type='text' name='token'/>
       </label>
 
-      <p>Role</p>
-      <label>
-      <input type='text' name='token'/>
-      </label>
-
       </form>
       <input type='submit' value='Authorize'/>
     </div>
