@@ -25,7 +25,7 @@ REVIEW_PROFILE_URL = "/profiles/review/"
 # HELPER FUNCTIONS
 
 
-def authorizeUser(auth_header):
+def authorize_user(auth_header):
     if auth_header:
         try:
             auth_token = auth_header.split(" ")[1]
@@ -49,17 +49,15 @@ def authorizeUser(auth_header):
             response = jsonify(response_object)
             response.status_code = 401
             return response
-        else:
 
-            return "authorized"
-    else:
-        response_object = {
-            'status': 'fail',
-            'message': 'Provide a valid auth token.'
-        }
-        response = jsonify(response_object)
-        response.status_code = 401
-        return response
+        return "authorized"
+    response_object = {
+        'status': 'fail',
+        'message': 'Provide a valid auth token.'
+    }
+    response = jsonify(response_object)
+    response.status_code = 401
+    return response
 
 
 class MasonBuilder(dict):
@@ -317,7 +315,7 @@ class UserItem(Resource):
         #raise Conflict(description="User_name doesn't exist in db.")
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
 
@@ -356,7 +354,7 @@ class UserItem(Resource):
             raise UnsupportedMediaType
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
@@ -392,7 +390,7 @@ class UserItem(Resource):
         """
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         db.session.delete(user)
@@ -416,7 +414,7 @@ class UserCollection(Resource):
         # get the auth token
         auth_header = request.headers.get('Authorization')
         # print(auth_header)
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
 
@@ -494,7 +492,7 @@ class UserCollection(Resource):
             raise Conflict(
                 description=f"User with name {request.json['name']} or email \
                 {request.json['email']} already exists"
-            )
+            ) from exc
         cache.delete("users_all")
         response_object = {
             'status': 'success',
@@ -529,8 +527,8 @@ class UserAuth(Resource):
                 response = make_response(jsonify(response_object))
                 response.status_code = 200
                 return response
-        except Exception as e:
-            print(e)
+        except Exception as err:
+            print(err)
             response_object = {
                 'status': 'fail',
                 'message': 'Try again'
@@ -562,10 +560,10 @@ class UserAuth(Resource):
                     response = make_response(jsonify(response_object))
                     response.status_code = 200
                     return response
-                except Exception as e:
+                except Exception as err:
                     response_object = {
                         'status': 'fail',
-                        'message': e
+                        'message': err
                     }
                     response = make_response(jsonify(response_object))
                     response.status_code = 200
@@ -603,7 +601,7 @@ class ProductItem(Resource):
         """
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         user = User.query.filter_by(name=username).first()
@@ -648,7 +646,7 @@ class ProductItem(Resource):
             raise UnsupportedMediaType
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
@@ -682,17 +680,17 @@ class ProductItem(Resource):
                     prod.categories = categories
                 else:
                     raise BadRequest
-            except (IntegrityError, KeyError):
-                raise BadRequest
+            except (IntegrityError, KeyError) as exc:
+                raise BadRequest from exc
         try:
             db.session.add(prod)
             db.session.commit()
             cache.set("prod_"+str(prod.id), prod.serialize())
             cache.delete("products_all")
-        except IntegrityError:
+        except IntegrityError as exc:
             raise Conflict(
                 description="Cannot update fields that are referenced in other tables."
-            )
+            ) from exc
         return Response(status=204)
 
     def delete(self, username, product):
@@ -752,7 +750,7 @@ class ProductCollection(Resource):
                 "commercemeta:products-by",
                 href=url_for("products_by_user", user=item["user_name"])
             )
-            if (len(item["categories"]) > 0):
+            if len(item["categories"]) > 0:
                 item.add_control(
                     "commercemeta:products-by",
                     href=url_for("products_by_category",
@@ -774,7 +772,7 @@ class ProductCollection(Resource):
             raise UnsupportedMediaType
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
@@ -942,7 +940,7 @@ class ReviewItem(Resource):
         """
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         review = Review.query.filter_by(user_name=username).first()
@@ -993,7 +991,7 @@ class ReviewItem(Resource):
             raise UnsupportedMediaType
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
@@ -1035,7 +1033,7 @@ class ReviewItem(Resource):
         This function is used to delete reviews from the db.
         """
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         review = Review.query.filter_by(
@@ -1061,7 +1059,7 @@ class ReviewCollection(Resource):
         """
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         cached_reviews = cache.get("reviews_all")
@@ -1112,7 +1110,7 @@ class ReviewCollection(Resource):
             raise UnsupportedMediaType
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
@@ -1152,7 +1150,7 @@ class ReviewsByUser(Resource):
     def get(self, user):
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
 
@@ -1207,7 +1205,7 @@ class CategoryItem(Resource):
         """
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         cached_category = cache.get("category_"+str(category.id))
@@ -1238,7 +1236,7 @@ class CategoryItem(Resource):
             raise UnsupportedMediaType
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
@@ -1264,7 +1262,7 @@ class CategoryItem(Resource):
         """
 
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         db.session.delete(category)
@@ -1321,7 +1319,7 @@ class CategoryCollection(Resource):
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
         auth_header = request.headers.get('Authorization')
-        is_authorized = authorizeUser(auth_header)
+        is_authorized = authorize_user(auth_header)
         if is_authorized != "authorized":
             return is_authorized
         try:
