@@ -21,7 +21,7 @@ DOC_TEMPLATE = {
 
 # This is needed for the authentication. Paste the token after the "Bearer".
 headers = {
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2ODQxNzkzMDgsImlhdCI6MTY4NDA5Mjg0OCwic3ViIjoia2FsYW1pZXMifQ.IXyWjSL9i5b6bXOvq3hG2txUNc_-0axzwZWf9yTyr_Q",
+    "Authorization": "Bearer <token here>",
     "Content-Type": "application/json"
 }
 
