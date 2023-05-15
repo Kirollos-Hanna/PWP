@@ -34,12 +34,292 @@ def app():
 
 # USER TESTS
 
+api_users_response_body = {
+    "@namespaces": {
+        "commercemeta": {
+            "name": "/commercemeta/link-relations#"
+        }
+    },
+    "@controls": {
+        "self": {
+            "href": "/api/users/"
+        },
+        "commercemeta:add-user": {
+            "method": "POST",
+            "encoding": "json",
+            "title": "add new user",
+            "schema": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "role",
+                    "password",
+                    "email"
+                ],
+                "properties": {
+                    "name": {
+                        "description": "The user's name",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "role": {
+                        "description": "The user's role",
+                        "type": "string",
+                        "enum": [
+                            "Customer",
+                            "Admin",
+                            "Seller"
+                        ],
+                        "default": "Customer"
+                    },
+                    "password": {
+                        "description": "User password",
+                        "type": "string",
+                        "minLength": 6,
+                        "maxLength": 256
+                    },
+                    "email": {
+                        "description": "User email",
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "avatar": {
+                        "description": "The url of the user's avatar",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "pattern": "^https?://",
+                        "minLength": 1,
+                        "maxLength": 256
+                    }
+                }
+            },
+            "href": "/api/users/"
+        },
+        "commercemeta:products-all": {
+            "title": "all products",
+            "href": "/api/users/products/"
+        },
+        "commercemeta:reviews-all": {
+            "title": "all reviews",
+            "href": "/api/users/reviews/"
+        }
+    }
+}
+
+api_products_response_body = {
+     "@namespaces": {
+        "commercemeta": {
+            "name": "/commercemeta/link-relations#"
+        }
+    },
+    "@controls": {
+        "self": {
+            "href": "/api/users/products/"
+        },
+        "commercemeta:add-product": {
+            "method": "POST",
+            "encoding": "json",
+            "title": "add new product",
+            "schema": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "price",
+                    "user_name"
+                ],
+                "properties": {
+                    "user_name": {
+                        "description": "The user name of the user who created this product",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "name": {
+                        "description": "Product Name",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "price": {
+                        "description": "Product Price",
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 100000
+                    },
+                    "description": {
+                        "description": "Product description",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 65535
+                    },
+                    "images": {
+                        "description": "A list of product image urls",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "format": "uri",
+                            "pattern": "^https?://",
+                            "minLength": 1,
+                            "maxLength": 256
+                        },
+                        "maxItems": 255
+                    },
+                    "categories": {
+                        "description": "An array of category names that this product belongs to",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                        },
+                        "maxItems": 255
+                    }
+                }
+            },
+            "href": "/api/users/products/"
+        },
+        "commercemeta:users-all": {
+            "title": "all users",
+            "href": "/api/users/"
+        },
+        "commercemeta:categories-all": {
+            "title": "all categories",
+            "href": "/api/categories/"
+        }
+    }
+}
+
+api_reviews_response_body = {
+     "@namespaces": {
+        "commercemeta": {
+            "name": "/commercemeta/link-relations#"
+        }
+    },
+    "@controls": {
+        "self": {
+            "href": "/api/users/reviews/"
+        },
+        "commercemeta:add-review": {
+            "method": "POST",
+            "encoding": "json",
+            "title": "add new review",
+            "schema": {
+                "type": "object",
+                "required": [
+                    "rating",
+                    "product_name",
+                    "user_name"
+                ],
+                "properties": {
+                    "rating": {
+                        "description": "The rating of the product by a user from 1 to 10",
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 10
+                    },
+                    "user_name": {
+                        "description": "The username of the reviewer",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "product_name": {
+                        "description": "The product name being reviewed",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                    }
+                }
+            },
+            "href": "/api/users/reviews/"
+        },
+        "commercemeta:users-all": {
+            "title": "all users",
+            "href": "/api/users/"
+        }
+    }
+}
+
+api_category_response_body = {
+     "@namespaces": {
+        "commercemeta": {
+            "name": "/commercemeta/link-relations#"
+        }
+    },
+    "@controls": {
+        "self": {
+            "href": "/api/categories/"
+        },
+        "commercemeta:add-category": {
+            "method": "POST",
+            "encoding": "json",
+            "title": "add new category",
+            "schema": {
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "description": "Category name",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "image": {
+                        "description": "A url for an image related to the category",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "pattern": "^https?://",
+                        "minLength": 1,
+                        "maxLength": 256
+                    },
+                    "product_names": {
+                        "description": "A list of product names related to the category",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                        }
+                    }
+                }
+            },
+            "href": "/api/categories/"
+        },
+        "commercemeta:products-all": {
+            "title": "all products",
+            "href": "/api/users/products/"
+        }
+    }
+}
+
 dummy_user_info = {
     "email": "test42@test.com",
     "name": "kalamies",
     "password": "123456",
     "role": "Customer",
-    "avatar": "https://www.google.com/"
+    "avatar": "https://www.google.com/",
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/"
+        }
+    }
 }
 
 user_login = {
@@ -53,8 +333,10 @@ user_login = {
 def test_get_all_users_endpoint(app):
     with app.test_client() as c:
         auth_token = add_user(c)
+        local_info = {**api_users_response_body}
+        local_info["items"] = [dummy_user_info]
         assert_get_request(
-            c, '/api/users/', [dummy_user_info], 200, auth_token)
+            c, '/api/users/', local_info, 200, auth_token)
 
 
 # POST USER
@@ -69,7 +351,12 @@ minimal_user_info_2 = {
     "email": "test423@test.com",
     "name": "kalamies2",
     "password": "123456",
-    "role": "Customer"
+    "role": "Customer",
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies2/"
+        }
+    }
 }
 
 full_user_info = {
@@ -77,7 +364,12 @@ full_user_info = {
     "name": "kalamies",
     "password": "123456",
     "role": "Customer",
-    "avatar": "https://www.google.com/"
+    "avatar": "https://www.google.com/",
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/"
+        }
+    }
 }
 
 full_user_info_2 = {
@@ -85,7 +377,12 @@ full_user_info_2 = {
     "name": "kalamies2",
     "password": "123456",
     "role": "Customer",
-    "avatar": "https://www.google.com/"
+    "avatar": "https://www.google.com/",
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies2/"
+        }
+    }
 }
 
 
@@ -103,8 +400,10 @@ def test_successful_add_user_minimal(app):
         local_info = {**minimal_user_info_2}
         local_info["avatar"] = None
 
+        local_response_info = {**api_users_response_body}
+        local_response_info["items"] = [dummy_user_info, local_info]
         assert_get_request(
-            c, '/api/users/', [dummy_user_info, local_info], 200, auth_token)
+            c, '/api/users/', local_response_info, 200, auth_token)
 
 
 def test_post_existing_user(app):
@@ -142,8 +441,10 @@ def test_add_user_full_successful(app):
             auth_token=auth_token
         )
 
+        local_response_info = {**api_users_response_body}
+        local_response_info["items"] = [dummy_user_info, full_user_info_2]
         assert_get_request(
-            c, '/api/users/', [dummy_user_info, full_user_info_2], 200, auth_token)
+            c, '/api/users/', local_response_info, 200, auth_token)
 
 
 def test_add_user_full_unsuccessful_avatar(app):
@@ -213,6 +514,7 @@ def test_add_and_get_single_user_endpoint(app):
         local_info["id"] = 2
         local_info["products"] = []
         local_info["reviews"] = []
+        local_info.pop("@controls")
         assert_get_request(c, '/api/users/kalamies2/',
                            local_info, 200, auth_token)
 
@@ -226,7 +528,12 @@ def test_add_multiple_and_get_all_users_endpoint(app):
             "name": "palomies",
             "password": "654321",
             "role": "Seller",
-            "avatar": "https://www.google.com/"
+            "avatar": "https://www.google.com/",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/palomies/"
+                }
+            }
         }
 
         full_user_info_2 = {
@@ -234,7 +541,12 @@ def test_add_multiple_and_get_all_users_endpoint(app):
             "name": "kalamies2",
             "password": "654321",
             "role": "Customer",
-            "avatar": "https://www.google.com/"
+            "avatar": "https://www.google.com/",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/kalamies2/"
+                }
+            }
         }
 
         assert_post_request(
@@ -255,10 +567,12 @@ def test_add_multiple_and_get_all_users_endpoint(app):
             auth_token=auth_token
         )
 
+        local_response_info = {**api_users_response_body}
+        local_response_info["items"] = [dummy_user_info, full_user_info_1, full_user_info_2]
         assert_get_request(
-            c, '/api/users/', [dummy_user_info, full_user_info_1, full_user_info_2], 200, auth_token)
+            c, '/api/users/', local_response_info, 200, auth_token)
 
-# # PUT USER
+# PUT USER
 
 
 def test_put_without_json(app):
@@ -304,7 +618,12 @@ def test_update_user_full_successful(app):
             "name": "kalamies5",
             "password": "123456",
             "role": "Customer",
-            "avatar": "https://www.google.com/"
+            "avatar": "https://www.google.com/",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/kalamies5/"
+                }
+            }
         }
 
         response = c.post('/api/users/', json=full_user_info)
@@ -314,7 +633,12 @@ def test_update_user_full_successful(app):
             "name": "kalamies2",
             "password": "1234561",
             "role": "Seller",
-            "avatar": "https://www.google2.com/"
+            "avatar": "https://www.google2.com/",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/kalamies2/"
+                }
+            }
         }
         response_put = c.put(
             '/api/users/' + full_user_info['name'] + "/", json=updated_full_user_info, headers={"Authorization": auth_token})
@@ -324,7 +648,9 @@ def test_update_user_full_successful(app):
 
         assert response_put.status_code == 204
 
-        assert_get_request(c, '/api/users/', [dummy_user_info,updated_full_user_info], 200, auth_token)
+        local_response_info = {**api_users_response_body}
+        local_response_info["items"] = [dummy_user_info, updated_full_user_info]
+        assert_get_request(c, '/api/users/', local_response_info, 200, auth_token)
 
 
 def test_update_user_full_unsuccessful_email(app):
@@ -335,7 +661,12 @@ def test_update_user_full_unsuccessful_email(app):
             "name": "kalamies4",
             "password": "123456",
             "role": "Customer",
-            "avatar": "https://www.google.com/"
+            "avatar": "https://www.google.com/",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/kalamies4/"
+                }
+            }
         }
 
         response = c.post('/api/users/', json=full_user_info, headers={"Authorization": auth_token})
@@ -345,7 +676,12 @@ def test_update_user_full_unsuccessful_email(app):
             "name": "kalamies5",
             "password": "1234561",
             "role": "Seller",
-            "avatar": "test.jpg"
+            "avatar": "test.jpg",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/kalamies5/"
+                }
+            }
         }
         response_put = c.put(
             '/api/users/' + full_user_info['name'] + "/", json=updated_full_user_info, headers={"Authorization": auth_token})
@@ -355,7 +691,9 @@ def test_update_user_full_unsuccessful_email(app):
 
         assert response_put.status_code == 400
 
-        assert_get_request(c, '/api/users/', [dummy_user_info, full_user_info], 200, auth_token)
+        local_response_info = {**api_users_response_body}
+        local_response_info["items"] = [dummy_user_info, full_user_info]
+        assert_get_request(c, '/api/users/', local_response_info, 200, auth_token)
 
 # DELETE USER
 
@@ -368,7 +706,12 @@ def test_delete_user_full(app):
             "name": "kalamies5",
             "password": "123456",
             "role": "Customer",
-            "avatar": "https://www.google.com/"
+            "avatar": "https://www.google.com/",
+            "@controls": {
+                "item": {
+                    "href": "/api/users/kalamies5/"
+                }
+            }
         }
 
         response = c.post('/api/users/', json=full_user_info, headers={"Authorization": auth_token})
@@ -381,7 +724,9 @@ def test_delete_user_full(app):
 
         assert response_delete.status_code == 204
 
-        assert_get_request(c, '/api/users/', [dummy_user_info], 200, auth_token)
+        local_response_info = {**api_users_response_body}
+        local_response_info["items"] = [dummy_user_info]
+        assert_get_request(c, '/api/users/', local_response_info, 200, auth_token)
 
 
 # PRODUCT TESTS
@@ -394,7 +739,13 @@ dummy_category_info = {
 minimal_product_info = {
     "name": "test_product",
     "price": 5.3,
-    "user_name": "kalamies"
+    "user_name": "kalamies",
+    "@controls": {
+        "commercemeta:products-by": {
+            "href": "/api/users/kalamies/products/"
+        },
+        'item': {'href': '/api/users/kalamies/products/test_product/'},
+    }
 }
 
 minimal_product_info_response = {
@@ -415,7 +766,13 @@ full_product_info = {
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
     """,
-    "categories": ["test_category"]
+    "categories": ["test_category"],
+    "@controls": {
+        "commercemeta:products-by": {
+            "href": "/api/categories/test_category/products/"
+        },
+        'item': {'href': '/api/users/kalamies/products/test_product/'},
+    }
 }
 
 full_product_info_2 = {
@@ -428,7 +785,13 @@ full_product_info_2 = {
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
     """,
-    "categories": ["test_category"]
+    "categories": ["test_category"],
+    "@controls": {
+        "commercemeta:products-by": {
+            "href": "/api/categories/test_category/products/"
+        },
+        'item': {'href': '/api/users/kalamies/products/test_product2/'},
+    }
 }
 
 updated_full_product_info = {
@@ -440,7 +803,13 @@ updated_full_product_info = {
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     """,
-    'categories': ['test_category']
+    'categories': ['test_category'],
+    "@controls": {
+        "commercemeta:products-by": {
+            "href": "/api/categories/test_category/products/"
+        },
+        'item': {'href': '/api/users/kalamies/products/test_product_updated/'},
+    }
 }
 
 updated_full_product_info_bad_images = {
@@ -481,7 +850,12 @@ updated_full_product_info_bad_categories = {
 }
 
 minimal_category_info = {
-    "name": "test_category"
+    "name": "test_category",
+    "@controls": {
+        "item": {
+            "href": "/api/categories/test_category/"
+        }
+    }
 }
 
 # GET ALL PRODUCTS
@@ -490,14 +864,16 @@ minimal_category_info = {
 def test_get_all_products_empty_endpoint(app):
     with app.test_client() as c:
         auth_token = add_user(c)
-        assert_get_request(c, '/api/users/products/', [], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
 
 # POST PRODUCT
 def test_successful_add_product_minimal(app):
     with app.test_client() as c:
         auth_token = add_user(c)
-        
+
         assert_post_request(
             client=c,
             url='/api/users/products/',
@@ -513,7 +889,9 @@ def test_successful_add_product_minimal(app):
         local_info["description"] = None
         local_info["reviews"] = []
         local_info["categories"] = []
-        assert_get_request(c, '/api/users/products/', [local_info], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = [local_info]
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
 
 def test_successful_add_product_full(app):
@@ -534,7 +912,9 @@ def test_successful_add_product_full(app):
         local_info["reviews"] = []
         local_info["categories"] = [{"id": 1, **dummy_category_info}]
 
-        assert_get_request(c, '/api/users/products/', [local_info], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = [local_info]
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
 
 def test_put_product_with_and_without_categories(app):
@@ -577,7 +957,7 @@ def test_put_product_with_and_without_categories(app):
 def test_update_nonexisting_product(app):
     with app.test_client() as c:
         auth_token = add_user(c)
-        
+
         response_put = c.put(
             '/api/users/kalamies/products/non_existing_product/',
             json=full_product_info,
@@ -648,7 +1028,9 @@ def test_add_and_get_single_product_endpoint(app):
 
         auth_token = add_product_prereqs(c)
 
-        assert_get_request(c, '/api/users/products/', [], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -664,7 +1046,8 @@ def test_add_and_get_single_product_endpoint(app):
         local_info["categories"] = [{"id": 1, **dummy_category_info}]
         local_info["reviews"] = []
         local_info.pop("user_name")
-
+        local_info.pop("@controls")
+        
         assert_get_request(
             c, '/api/users/kalamies/products/test_product/', local_info, 200, auth_token)
 
@@ -692,7 +1075,9 @@ def test_add_multiple_and_get_all_products_endpoint(app):
 
         auth_token = add_product_prereqs(c)
 
-        assert_get_request(c, '/api/users/products/', [], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -720,14 +1105,18 @@ def test_add_multiple_and_get_all_products_endpoint(app):
         local_info["reviews"] = local_info_2["reviews"] = []
         local_info["categories"] = local_info_2["categories"] = [
             {"id": 1, **dummy_category_info}]
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = [local_info, local_info_2]
         assert_get_request(c, '/api/users/products/',
-                           [local_info, local_info_2], 200, auth_token)
+                           local_response_info, 200, auth_token)
 
 
 def test_unsuccessful_add_multiple_products_same_name(app):
     with app.test_client() as c:
         auth_token = add_user(c)
-        assert_get_request(c, '/api/users/products/', [], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -777,8 +1166,10 @@ def test_update_product_full_successful(app):
         updated_local_info["reviews"] = []
         updated_local_info["user_name"] = dummy_user_info["name"]
         updated_local_info["categories"] = [{"id": 1, **dummy_category_info}]
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = [updated_local_info]
         assert_get_request(c, '/api/users/products/',
-                           [updated_local_info], 200, auth_token)
+                           local_response_info, 200, auth_token)
 
 
 def test_update_product_full_unsuccessful_images(app):
@@ -828,7 +1219,9 @@ def test_delete_product_full(app):
     with app.test_client() as c:
         auth_token = add_product_prereqs(c)
 
-        assert_get_request(c, '/api/users/products/', [], 200, auth_token)
+        local_response_info = {**api_products_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
         response_post = assert_post_request(
             client=c,
@@ -848,7 +1241,7 @@ def test_delete_product_full(app):
 
         assert response_delete.status_code == 404
 
-        assert_get_request(c, '/api/users/products/', [], 200, auth_token)
+        assert_get_request(c, '/api/users/products/', local_response_info, 200, auth_token)
 
 
 # REVIEW TESTS
@@ -856,6 +1249,14 @@ minimal_review_info = {
     "rating": 2.5,
     "user_name": "kalamies",
     "product_name": "test_product",
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/reviews/test_product/"
+        },
+        "commercemeta:reviews-by": {
+            "href": "/api/users/kalamies/reviews/"
+        }
+    }
 }
 
 minimal_review_info_below_lowest_threshold = {
@@ -891,6 +1292,14 @@ full_review_info = {
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
     """,
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/reviews/test_product/"
+        },
+        "commercemeta:reviews-by": {
+            "href": "/api/users/kalamies/reviews/"
+        }
+    }
 }
 
 full_review_info_2 = {
@@ -902,6 +1311,14 @@ full_review_info_2 = {
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
     """,
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/reviews/test_product/"
+        },
+        "commercemeta:reviews-by": {
+            "href": "/api/users/kalamies/reviews/"
+        }
+    }
 }
 
 full_review_info_bad_rating = {
@@ -913,6 +1330,14 @@ full_review_info_bad_rating = {
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
     """,
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/reviews/test_product/"
+        },
+        "commercemeta:reviews-by": {
+            "href": "/api/users/kalamies/reviews/"
+        }
+    }
 }
 
 full_review_info_bad_user = {
@@ -924,6 +1349,14 @@ full_review_info_bad_user = {
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     Sed sem libero, venenatis vitae risus eget, sagittis tempus lacus. Aenean non faucibus dui. Phasellus placerat mi tellus, vitae vehicula urna mattis sit amet. Ut eleifend, libero ut rutrum auctor, tellus felis imperdiet erat, in lacinia libero lacus a est. Nam enim libero, maximus id maximus eu, faucibus non quam. Praesent sodales urna in orci aliquam lobortis. Sed a posuere lorem. Proin sed odio ullamcorper arcu luctus mattis. Curabitur in finibus magna. Curabitur non nisl et dui laoreet hendrerit. Donec tempor iaculis egestas. Phasellus convallis libero feugiat massa egestas posuere. Morbi leo nibh, gravida dapibus nulla sed, vestibulum blandit eros. Nulla ut ante metus. Sed nec cursus est. Ut in ex quis ligula dictum blandit.
     """,
+    "@controls": {
+        "item": {
+            "href": "/api/users/notkalamies/reviews/test_product/"
+        },
+        "commercemeta:reviews-by": {
+            "href": "/api/users/notkalamies/reviews/"
+        }
+    }
 }
 
 full_review_info_bad_product = {
@@ -945,6 +1378,14 @@ updated_full_review_info = {
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse viverra eu sapien non pulvinar. Pellentesque sit amet diam lectus. Vestibulum blandit lacinia justo sed molestie. Nunc tempor est tortor, sit amet suscipit erat molestie ac. Donec ullamcorper luctus mi vel elementum. Aliquam vel condimentum magna. Etiam sed ipsum tristique, malesuada leo at, tempus tortor. Vivamus dictum orci vel metus auctor laoreet. Pellentesque et eleifend quam. Etiam vehicula arcu orci, euismod accumsan dolor placerat at. Mauris ligula sapien, ornare sit amet lobortis a, interdum vitae quam. Nam sed consectetur nunc. In tincidunt congue magna quis venenatis. Vivamus ullamcorper felis eu viverra pulvinar. Nulla sed ipsum nibh. Nulla vitae nisl non diam gravida semper fermentum nec orci.
     Duis vitae molestie sem. Cras sit amet sapien nec nibh faucibus venenatis. Sed eget nibh posuere, molestie elit vel, faucibus arcu. Sed consequat tellus at lacus placerat, et posuere mi sagittis. Nullam molestie sapien pharetra mollis vulputate. Duis efficitur tristique arcu sed tristique. Curabitur vel mattis massa, ut efficitur turpis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
     """,
+    "@controls": {
+        "item": {
+            "href": "/api/users/kalamies/reviews/test_product/"
+        },
+        "commercemeta:reviews-by": {
+            "href": "/api/users/kalamies/reviews/"
+        }
+    }
 }
 
 updated_full_review_info_fail_user = {
@@ -961,7 +1402,9 @@ updated_full_review_info_fail_product = {
 def test_get_all_reviews_empty_endpoint(app):
     with app.test_client() as c:
         auth_token = add_user(c)
-        assert_get_request(c, '/api/users/reviews/', [], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
 
 # POST REVIEW
@@ -984,7 +1427,9 @@ def test_successful_add_review_minimal(app):
         local_info["id"] = 1
         local_info["description"] = None
 
-        assert_get_request(c, '/api/users/reviews/', [local_info], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = [local_info]
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
 
 def test_put_review_without_json(app):
@@ -1018,7 +1463,9 @@ def test_successful_add_review_full(app):
         local_info = {**full_review_info}
         local_info["id"] = 1
 
-        assert_get_request(c, '/api/users/reviews/', [local_info], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = [local_info]
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
 
 def test_add_review_full_unsuccessful_rating(app):
@@ -1091,7 +1538,9 @@ def test_add_and_get_single_review_endpoint(app):
     with app.test_client() as c:
         auth_token = add_review_prereqs(c)
 
-        assert_get_request(c, '/api/users/reviews/', [], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -1104,10 +1553,13 @@ def test_add_and_get_single_review_endpoint(app):
 
         local_info = {**full_review_info}
         local_info["id"] = 1
-        local_info["user"] = {"id": 1, **dummy_user_info}
+        local_user_info = {**dummy_user_info}
+        local_user_info.pop("@controls")
+        local_info["user"] = {"id": 1, **local_user_info}
         local_info["product"] = minimal_product_info_response
         local_info.pop("user_name")
         local_info.pop("product_name")
+        local_info.pop("@controls")
 
         assert_get_request(
             c, '/api/users/kalamies/reviews/test_product/', local_info, 200, auth_token)
@@ -1118,7 +1570,9 @@ def test_add_multiple_and_get_all_reviews_endpoint(app):
 
         auth_token = add_review_prereqs(c)
 
-        assert_get_request(c, '/api/users/reviews/', [], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -1146,8 +1600,10 @@ def test_add_multiple_and_get_all_reviews_endpoint(app):
         local_info["id"] = 1
         local_info_2["id"] = 2
 
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = [local_info, local_info_2]
         assert_get_request(c, '/api/users/reviews/',
-                           [local_info, local_info_2], 200, auth_token)
+                           local_response_info, 200, auth_token)
 
 
 # PUT REVIEW
@@ -1176,7 +1632,9 @@ def test_update_review_successful(app):
         updated_local_info["id"] = 1
         updated_local_info["user_name"] = dummy_user_info["name"]
         updated_local_info["product_name"] = minimal_product_info["name"]
-        assert_get_request(c, '/api/users/reviews/', [updated_local_info], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = [updated_local_info]
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
 
 def test_update_review_unsuccessful(app):
@@ -1214,7 +1672,9 @@ def test_delete_review_full(app):
     with app.test_client() as c:
         auth_token = add_review_prereqs(c)
 
-        assert_get_request(c, '/api/users/reviews/', [], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -1237,42 +1697,64 @@ def test_delete_review_full(app):
 
         assert response_delete.status_code == 409
 
-        assert_get_request(c, '/api/users/reviews/', [], 200, auth_token)
+        local_response_info = {**api_reviews_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/users/reviews/', local_response_info, 200, auth_token)
 
 
 # CATEGORY TESTS
-minimal_category_info = {
-    "name": "test_category"
-}
-
-
 full_category_info = {
     "name": "test_category",
     "image": "https://www.google.com/",
-    "product_names": ["test_product"]
+    "product_names": ["test_product"],
+    "@controls": {
+        "item": {
+            "href": "/api/categories/test_category/"
+        }
+    }
 }
 
 full_category_info_2 = {
     "name": "test_category2",
     "image": "https://www.google.com/",
-    "product_names": ["test_product"]
+    "product_names": ["test_product"],
+    "@controls": {
+        "item": {
+            "href": "/api/categories/test_category2/"
+        }
+    }
 }
 
 full_category_info_bad_image = {
     "name": "test_category",
     "image": "test.jpg",
-    "product_names": ["test_product"]
+    "product_names": ["test_product"],
+    "@controls": {
+        "item": {
+            "href": "/api/categories/test_category/"
+        }
+    }
 }
 full_category_info_bad_product = {
     "name": "test_category",
     "image": "https://www.google.com/",
-    "product_names": ["nonexistent_product"]
+    "product_names": ["nonexistent_product"],
+    "@controls": {
+        "item": {
+            "href": "/api/categories/test_category/"
+        }
+    }
 }
 
 updated_full_category_info = {
     "name": "test_category3",
     "image": "https://www.yahoo.com/",
-    "product_names": ["test_product"]
+    "product_names": ["test_product"],
+    "@controls": {
+        "item": {
+            "href": "/api/categories/test_category3/"
+        }
+    }
 }
 
 updated_full_category_info_bad_image = {
@@ -1281,12 +1763,15 @@ updated_full_category_info_bad_image = {
 updated_full_category_info_bad_products = {
     "product_names": ["nonexistent_product"]
 }
+
 # GET ALL CATEGORIES
 
 
 def test_get_all_categories_empty_endpoint(app):
     with app.test_client() as c:
-        assert_get_request(c, '/api/categories/', [], 200)
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/categories/', local_response_info, 200)
 
 
 # POST CATEGORY
@@ -1351,7 +1836,9 @@ def test_successful_add_category_minimal(app):
         local_info["id"] = 1
         local_info["image"] = None
 
-        assert_get_request(c, '/api/categories/', [local_info], 200, auth_token)
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = [local_info]
+        assert_get_request(c, '/api/categories/', local_response_info, 200, auth_token)
 
 
 def test_successful_add_category_full(app):
@@ -1369,7 +1856,9 @@ def test_successful_add_category_full(app):
         local_info["id"] = 1
         local_info.pop("product_names")
 
-        assert_get_request(c, '/api/categories/', [local_info], 200, auth_token)
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = [local_info]
+        assert_get_request(c, '/api/categories/', local_response_info, 200, auth_token)
 
 
 def test_unsuccessful_add_category_full_bad_image(app):
@@ -1400,7 +1889,9 @@ def test_add_and_get_single_category_endpoint(app):
     with app.test_client() as c:
         auth_token = add_category_prereqs(c)
 
-        assert_get_request(c, '/api/categories/', [], 200)
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/categories/', local_response_info, 200)
 
         assert_post_request(
             client=c,
@@ -1413,11 +1904,14 @@ def test_add_and_get_single_category_endpoint(app):
 
         local_info = {**full_category_info}
         local_info["id"] = 1
-        local_product_info = {**minimal_product_info,
+        local_product_info = {**minimal_product_info}
+        local_product_info.pop("@controls")
+        local_product_info = {**local_product_info,
                               "description": None, "images": None, "id": 1}
         local_product_info.pop("user_name")
         local_info["products"] = [local_product_info]
         local_info.pop("product_names")
+        local_info.pop("@controls")
 
         assert_get_request(
             c, '/api/categories/test_category/', local_info, 200, auth_token)
@@ -1428,7 +1922,9 @@ def test_add_multiple_and_get_all_categories_endpoint(app):
 
         auth_token = add_category_prereqs(c)
 
-        assert_get_request(c, '/api/categories/', [], 200)
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/categories/', local_response_info, 200)
 
         assert_post_request(
             client=c,
@@ -1455,8 +1951,10 @@ def test_add_multiple_and_get_all_categories_endpoint(app):
         local_info.pop("product_names")
         local_info_2.pop("product_names")
 
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = [local_info, local_info_2]
         assert_get_request(c, '/api/categories/',
-                           [local_info, local_info_2], 200, auth_token)
+                           local_response_info, 200, auth_token)
 
 
 # PUT CATEGORY
@@ -1481,7 +1979,10 @@ def test_update_category_successful(app):
         updated_local_info = {**updated_full_category_info}
         updated_local_info["id"] = 1
         updated_local_info.pop("product_names")
-        assert_get_request(c, '/api/categories/', [updated_local_info], 200, auth_token)
+
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = [updated_local_info]
+        assert_get_request(c, '/api/categories/', local_response_info, 200, auth_token)
 
 
 def test_update_category_with_wrong_product_names(app):
@@ -1545,7 +2046,9 @@ def test_delete_category_full(app):
     with app.test_client() as c:
         auth_token = add_category_prereqs(c)
 
-        assert_get_request(c, '/api/categories/', [], 200, auth_token)
+        local_response_info = {**api_category_response_body}
+        local_response_info["items"] = []
+        assert_get_request(c, '/api/categories/', local_response_info, 200, auth_token)
 
         assert_post_request(
             client=c,
@@ -1561,7 +2064,7 @@ def test_delete_category_full(app):
 
         assert response_delete.status_code == 204
 
-        assert_get_request(c, '/api/categories/', [], 200, auth_token)
+        assert_get_request(c, '/api/categories/', local_response_info, 200, auth_token)
 
 
 # Helper Functions
@@ -1605,7 +2108,7 @@ def add_product_prereqs(c):
         dummy_category_info,
         auth_token
     )
-    
+
     return auth_token
 
 
@@ -1624,7 +2127,8 @@ def make_faulty_product_put_requests(app, json_data, expected_response_code):
 
         location = response_post.headers['location']
 
-        response_put = c.put(location, json=json_data, headers={"Authorization": auth_token})
+        response_put = c.put(location, json=json_data, headers={
+                             "Authorization": auth_token})
 
         assert response_put.status_code == expected_response_code
 
@@ -1638,7 +2142,7 @@ def add_review_prereqs(c):
         minimal_product_info,
         auth_token
     )
-    
+
     return auth_token
 
 
@@ -1651,7 +2155,7 @@ def add_category_prereqs(c):
         minimal_product_info,
         auth_token
     )
-    
+
     return auth_token
 
 

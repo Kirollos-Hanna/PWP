@@ -5,8 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Conflict, BadRequest, UnsupportedMediaType
 from jsonschema import validate, ValidationError
 from flask_caching import Cache
-from productsapi.db import db, User, Product, Review, Category, BlacklistToken
 from validate_email import validate_email
+from productsapi.db import db, User, Product, Review, Category, BlacklistToken
 #from werkzeug.routing import BaseConverter
 #from productsapi.converters import UserConverter
 api = Api()
@@ -24,16 +24,17 @@ REVIEW_PROFILE_URL = "/profiles/review/"
 
 # HELPER FUNCTIONS
 
+
 def authorizeUser(auth_header):
     if auth_header:
         try:
             auth_token = auth_header.split(" ")[1]
         except IndexError:
-            responseObject = {
+            response_object = {
                 'status': 'fail',
                 'message': 'Bearer token malformed.'
             }
-            response = jsonify(responseObject)
+            response = jsonify(response_object)
             response.status_code = 401
             return response
     else:
@@ -41,25 +42,25 @@ def authorizeUser(auth_header):
     if auth_token:
         resp = User.decode_auth_token(auth_token)
         if 'token blacklisted' in resp.lower() or 'signature expired' in resp.lower() or 'invalid token' in resp.lower():
-            responseObject = {
+            response_object = {
                 'status': 'fail',
                 'message': resp
             }
-            response = jsonify(responseObject)
+            response = jsonify(response_object)
             response.status_code = 401
             return response
         else:
-            
+
             return "authorized"
     else:
-        responseObject = {
+        response_object = {
             'status': 'fail',
             'message': 'Provide a valid auth token.'
         }
-        response = jsonify(responseObject)
+        response = jsonify(response_object)
         response.status_code = 401
         return response
-    
+
 
 class MasonBuilder(dict):
     """
@@ -88,20 +89,20 @@ class MasonBuilder(dict):
             "@messages": [details],
         }
 
-    def add_namespace(self, ns, uri):
+    def add_namespace(self, namespace, uri):
         """
         Adds a namespace element to the object. A namespace defines where our
         link relations are coming from. The URI can be an address where
         developers can find information about our link relations.
 
-        : param str ns: the namespace prefix
+        : param str namespace: the namespace prefix
         : param str uri: the identifier URI of the namespace
         """
 
         if "@namespaces" not in self:
             self["@namespaces"] = {}
 
-        self["@namespaces"][ns] = {
+        self["@namespaces"][namespace] = {
             "name": uri
         }
 
@@ -130,13 +131,13 @@ class MasonBuilder(dict):
         Utility method for adding POST type controls. The control is
         constructed from the method's parameters. Method and encoding are
         fixed to "POST" and "json" respectively.
-        
+
         : param str ctrl_name: name of the control (including namespace if any)
         : param str href: target URI for the control
         : param str title: human-readable title for the control
         : param dict schema: a dictionary representing a valid JSON schema
         """
-    
+
         self.add_control(
             ctrl_name,
             href,
@@ -151,7 +152,7 @@ class MasonBuilder(dict):
         Utility method for adding PUT type controls. The control is
         constructed from the method's parameters. Control name, method and
         encoding are fixed to "edit", "PUT" and "json" respectively.
-        
+
         : param str href: target URI for the control
         : param str title: human-readable title for the control
         : param dict schema: a dictionary representing a valid JSON schema
@@ -165,7 +166,7 @@ class MasonBuilder(dict):
             title=title,
             schema=schema
         )
-        
+
     def add_control_delete(self, title, href):
         """
         Utility method for adding PUT type controls. The control is
@@ -176,7 +177,7 @@ class MasonBuilder(dict):
         : param str href: target URI for the control
         : param str title: human-readable title for the control
         """
-        
+
         self.add_control(
             "commercemeta:delete",
             href,
@@ -184,39 +185,40 @@ class MasonBuilder(dict):
             title=title,
         )
 
+
 class CommerceMetaBuilder(MasonBuilder):
     def add_control_users_all(self):
         self.add_control(
             "commercemeta:users-all",
             api.url_for(UserCollection),
-            title ="all users"
+            title="all users"
         )
 
     def add_control_products_all(self):
         self.add_control(
             "commercemeta:products-all",
             url_for("products"),
-            title ="all products"
+            title="all products"
         )
 
     def add_control_categories_all(self):
         self.add_control(
             "commercemeta:categories-all",
             url_for("categories"),
-            title ="all categories"
+            title="all categories"
         )
-    
+
     def add_control_reviews_all(self):
         self.add_control(
             "commercemeta:reviews-all",
             url_for("reviews"),
-            title ="all reviews"
+            title="all reviews"
         )
 
     def add_control_users_add(self):
         self.add_control_post(
             "commercemeta:add-user",
-            title ="add new user",
+            title="add new user",
             href=api.url_for(UserCollection),
             schema=User.json_schema()
         )
@@ -224,7 +226,7 @@ class CommerceMetaBuilder(MasonBuilder):
     def add_control_products_add(self):
         self.add_control_post(
             "commercemeta:add-product",
-            title ="add new product",
+            title="add new product",
             href=api.url_for(ProductCollection),
             schema=Product.json_schema()
         )
@@ -232,7 +234,7 @@ class CommerceMetaBuilder(MasonBuilder):
     def add_control_categories_add(self):
         self.add_control_post(
             "commercemeta:add-category",
-            title ="add new category",
+            title="add new category",
             href=api.url_for(CategoryCollection),
             schema=Category.json_schema()
         )
@@ -240,62 +242,63 @@ class CommerceMetaBuilder(MasonBuilder):
     def add_control_reviews_add(self):
         self.add_control_post(
             "commercemeta:add-review",
-            title ="add new review",
+            title="add new review",
             href=api.url_for(ReviewCollection),
             schema=Review.json_schema()
         )
 
     def add_control_edit_user(self, user):
         self.add_control_put(
-           "edit",
-           api.url_for(UserItem, user=user),
-           User.json_schema() 
+            "edit",
+            api.url_for(UserItem, user=user),
+            User.json_schema()
         )
 
     def add_control_edit_product(self, username, product):
         self.add_control_put(
-           "edit",
-           api.url_for(ProductItem, username=username, product=product),
-           Product.json_schema() 
+            "edit",
+            api.url_for(ProductItem, username=username, product=product),
+            Product.json_schema()
         )
 
     def add_control_edit_category(self, category):
         self.add_control_put(
-           "edit",
-           api.url_for(CategoryItem, category=category),
-           Category.json_schema() 
+            "edit",
+            api.url_for(CategoryItem, category=category),
+            Category.json_schema()
         )
 
     def add_control_edit_review(self, username, product):
         self.add_control_put(
-           "edit",
-           api.url_for(ReviewItem, username=username, product=product),
-           Review.json_schema() 
+            "edit",
+            api.url_for(ReviewItem, username=username, product=product),
+            Review.json_schema()
         )
 
     def add_control_delete_user(self, user):
         self.add_control_delete(
             "commercemeta:delete",
-            api.url_for(UserItem, user=user),           
+            api.url_for(UserItem, user=user),
         )
 
     def add_control_delete_product(self, username, product):
         self.add_control_delete(
             "commercemeta:delete",
-            api.url_for(ProductItem, username=username, product=product),    
+            api.url_for(ProductItem, username=username, product=product),
         )
-    
+
     def add_control_delete_category(self, category):
         self.add_control_delete(
             "commercemeta:delete",
-            api.url_for(CategoryItem, category=category),    
+            api.url_for(CategoryItem, category=category),
         )
 
     def add_control_delete_review(self, username, product):
         self.add_control_delete(
             "commercemeta:delete",
-            api.url_for(ReviewItem, username=username, product=product),    
+            api.url_for(ReviewItem, username=username, product=product),
         )
+
 
 class UserItem(Resource):
     """
@@ -310,22 +313,22 @@ class UserItem(Resource):
         users are looked up through a particular product and a username. 
         """
         #user = User.query.filter_by(name=user).first()
-        #if not user:
-            #raise Conflict(description="User_name doesn't exist in db.")
-        
+        # if not user:
+        #raise Conflict(description="User_name doesn't exist in db.")
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
-        
+
         cached_user = cache.get("user_"+str(user.id))
         if cached_user:
             return cached_user
-        
+
         cache.set("user_"+str(user.id), user.serialize())
 
         data = CommerceMetaBuilder(user.serialize())
-        #print(data)
+        # print(data)
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("profile", href=USER_PROFILE_URL)
         data.add_control("self", href=request.path)
@@ -351,7 +354,7 @@ class UserItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -380,14 +383,14 @@ class UserItem(Resource):
         except IntegrityError as exc:
             raise Conflict(
                 description="Cannot modify username, since it has references in other tables."
-            )
+            ) from exc
         return Response(status=204)
 
     def delete(self, user):
         """
         This function deletes the user from the db.
         """
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -412,16 +415,16 @@ class UserCollection(Resource):
         """
         # get the auth token
         auth_header = request.headers.get('Authorization')
-        #print(auth_header)
+        # print(auth_header)
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
-        
+
         cached_users = cache.get("users_all")
         if cached_users:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_users), status=200)
-        
+
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
@@ -493,48 +496,49 @@ class UserCollection(Resource):
                 {request.json['email']} already exists"
             )
         cache.delete("users_all")
-        responseObject = {
+        response_object = {
             'status': 'success',
             'message': 'Successfully registered.',
             'auth_token': auth_token
         }
-        response = make_response(jsonify(responseObject))
+        response = make_response(jsonify(response_object))
         api_url = api.url_for(UserItem, user=user)
         response.headers['location'] = api_url
         response.status_code = 201
         return response
 
+
 class UserAuth(Resource):
-    
+
     def post(self):
-         # get the post data
+        # get the post data
         post_data = request.get_json()
         try:
             # fetch the user data
             user = User.query.filter_by(
                 email=post_data.get('email')
-              ).first()
+            ).first()
             auth_token = user.encode_auth_token(user.name)
-            
+
             if auth_token:
-                responseObject = {
+                response_object = {
                     'status': 'success',
                     'message': 'Successfully logged in.',
                     'auth_token': auth_token
                 }
-                response = make_response(jsonify(responseObject))
+                response = make_response(jsonify(response_object))
                 response.status_code = 200
                 return response
         except Exception as e:
             print(e)
-            responseObject = {
+            response_object = {
                 'status': 'fail',
                 'message': 'Try again'
             }
-            response = make_response(jsonify(responseObject))
+            response = make_response(jsonify(response_object))
             response.status_code = 403
             return response
-        
+
     def delete(self):
         # get auth token
         auth_header = request.headers.get('Authorization')
@@ -544,44 +548,45 @@ class UserAuth(Resource):
             auth_token = ''
         if auth_token:
             resp = User.decode_auth_token(auth_token)
-            if not 'token blacklisted' in resp.lower() and not 'signature expired' in resp.lower() and not 'invalid token' in resp.lower():
+            if 'token blacklisted' not in resp.lower() and 'signature expired' not in resp.lower() and 'invalid token' not in resp.lower():
                 # mark the token as blacklisted
                 blacklist_token = BlacklistToken(token=auth_token)
                 try:
                     # insert the token
                     db.session.add(blacklist_token)
                     db.session.commit()
-                    responseObject = {
+                    response_object = {
                         'status': 'success',
                         'message': 'Successfully logged out.'
                     }
-                    response = make_response(jsonify(responseObject))
+                    response = make_response(jsonify(response_object))
                     response.status_code = 200
                     return response
                 except Exception as e:
-                    responseObject = {
+                    response_object = {
                         'status': 'fail',
                         'message': e
                     }
-                    response = make_response(jsonify(responseObject))
+                    response = make_response(jsonify(response_object))
                     response.status_code = 200
                     return response
             else:
-                responseObject = {
+                response_object = {
                     'status': 'fail',
                     'message': resp
                 }
-                response = make_response(jsonify(responseObject))
+                response = make_response(jsonify(response_object))
                 response.status_code = 401
                 return response
         else:
-            responseObject = {
+            response_object = {
                 'status': 'fail',
                 'message': 'Provide a valid auth token.'
             }
-            response = make_response(jsonify(responseObject))
+            response = make_response(jsonify(response_object))
             response.status_code = 403
             return response
+
 
 class ProductItem(Resource):
     """
@@ -596,7 +601,7 @@ class ProductItem(Resource):
         This function fetches and returns the information of an individual 
         product. 
         """
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -622,17 +627,18 @@ class ProductItem(Resource):
         data.add_control_edit_product(username, product)
         data.add_control_delete_product(username, product)
         data.add_control(
-            "commercemeta:products-by", 
+            "commercemeta:products-by",
             href=url_for("products_by_user", user=prod.user_name)
         )
         data.add_control(
-            "commercemeta:products-by", 
-            href=url_for("products_by_category", category=prod.categories[0].name)
+            "commercemeta:products-by",
+            href=url_for("products_by_category",
+                         category=prod.categories[0].name)
         )
 
         return Response(json.dumps(data), 200, mimetype=MASON)
 
-    def put(self, username, product):
+    def put(self, product):
         """
         This function is used to modify an existing product in the db.
         The function requires a valid JSON object, which is validated prior 
@@ -640,7 +646,7 @@ class ProductItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -649,7 +655,7 @@ class ProductItem(Resource):
             validate(request.json, Product.json_schema())
         except ValidationError as e_v:
             raise BadRequest(description=str(e_v)) from e_v
-        user = User.query.filter_by(name=username).first()
+        # user = User.query.filter_by(name=username).first()
         prod = Product.query.filter_by(name=product).first()
         if not prod:
             raise Conflict(
@@ -658,14 +664,14 @@ class ProductItem(Resource):
 
         prod.deserialize(request.json)
         #user = None
-        #if 'user_name' in request.json:
-            #try:
-                #user = User.query.filter_by(
-                    #name=request.json['user_name']).first()
-                #if user:
-                    #product.user = user
-            #except (IntegrityError, KeyError) as e_i:
-                #raise BadRequest
+        # if 'user_name' in request.json:
+        # try:
+        # user = User.query.filter_by(
+        # name=request.json['user_name']).first()
+        # if user:
+        #product.user = user
+        # except (IntegrityError, KeyError) as e_i:
+        #raise BadRequest
 
         categories = None
         if 'categories' in request.json:
@@ -676,20 +682,20 @@ class ProductItem(Resource):
                     prod.categories = categories
                 else:
                     raise BadRequest
-            except (IntegrityError, KeyError) as e_i:
+            except (IntegrityError, KeyError):
                 raise BadRequest
         try:
             db.session.add(prod)
             db.session.commit()
             cache.set("prod_"+str(prod.id), prod.serialize())
             cache.delete("products_all")
-        except IntegrityError as exc:
+        except IntegrityError:
             raise Conflict(
                 description="Cannot update fields that are referenced in other tables."
             )
         return Response(status=204)
 
-    def delete(self, username, product):
+    def delete(self, product):
         """
         This function is used to delete a product from the db.
         """
@@ -719,16 +725,15 @@ class ProductCollection(Resource):
         if cached_products:
             return Response(headers={"Content-Type": "application/json"},
                             response=json.dumps(cached_products), status=200)
-        
+
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_products_add()
         data.add_control_users_all()
-        data.add_control_categories_all() 
+        data.add_control_categories_all()
         products = Product.query.all()
-        #products_json = []
-        #data["items"] = []
+
         for product in products:
             item = CommerceMetaBuilder({
                 'id': product.id,
@@ -740,21 +745,22 @@ class ProductCollection(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            #print(item["user_name"])
-            item.add_control("item", api.url_for(ProductItem, product=item["name"], username=item["user_name"]))
+            # print(item["user_name"])
+            item.add_control("item", api.url_for(
+                ProductItem, product=item["name"], username=item["user_name"]))
             item.add_control(
-            "commercemeta:products-by", 
-            href=url_for("products_by_user", user=item["user_name"])
+                "commercemeta:products-by",
+                href=url_for("products_by_user", user=item["user_name"])
             )
-            item.add_control(
-            "commercemeta:products-by", 
-            href=url_for("products_by_category", category=item["categories"][0]["name"])
-            )
-       
+            if (len(item["categories"]) > 0):
+                item.add_control(
+                    "commercemeta:products-by",
+                    href=url_for("products_by_category",
+                                 category=item["categories"][0]["name"])
+                )
+
             data["items"].append(item)
-        
-    
-       
+
         cache.set("products_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
                         response=json.dumps(data), status=200, mimetype=MASON)
@@ -766,7 +772,7 @@ class ProductCollection(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -774,7 +780,7 @@ class ProductCollection(Resource):
         try:
             validate(request.json, Product.json_schema())
         except ValidationError as e_v:
-            raise BadRequest(description=str(e_v))
+            raise BadRequest(description=str(e_v)) from e_v
 
         # TODO:: Should a product always have an user? If so, return BadResponse if user is None
         user = User.query.filter_by(
@@ -795,7 +801,7 @@ class ProductCollection(Resource):
                     request.json['images']) if 'images' in request.json else None,
                 user=user
             )
-            
+
             if categories:
                 product.categories = categories
             db.session.add(product)
@@ -804,7 +810,7 @@ class ProductCollection(Resource):
         except IntegrityError as e_i:
             raise Conflict(
                 description=e_i
-            )
+            ) from e_i
         cache.delete("products_all")
        # NOTE:: CAN BE OF USE WHEN LINKING PRODUCTS TO CATEGORIES
        # WHEN CREATING PRODUCTS, CREATES CATEGORIES IF THEY ARE NOT YET CREATED
@@ -838,6 +844,7 @@ class ProductCollection(Resource):
         response.status_code = 201
         return response
 
+
 class ProductsByUser(Resource):
 
     def get(self, user):
@@ -846,12 +853,12 @@ class ProductsByUser(Resource):
         products = product_user.products
 
         #cached_products = cache.get("products_all")
-        #if cached_products:
-            #return Response(headers={"Content-Type": "application/json"},
-                            #response=json.dumps(cached_products), status=200)
-        
+        # if cached_products:
+        # return Response(headers={"Content-Type": "application/json"},
+        # response=json.dumps(cached_products), status=200)
+
         #user = User.query.all()
-        
+
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
@@ -870,10 +877,11 @@ class ProductsByUser(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            item.add_control("item", api.url_for(ProductItem, product=item["name"]))
-            item.add_control("customer", api.url_for(UserItem, user=item["user_name"]))
+            item.add_control("item", api.url_for(
+                ProductItem, product=item["name"]))
+            item.add_control("customer", api.url_for(
+                UserItem, user=item["user_name"]))
             data["items"].append(item)
-        
 
         cache.set("products_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
@@ -888,15 +896,15 @@ class ProductsByCategory(Resource):
         products = product_category.products
 
         #cached_products = cache.get("products_all")
-        #if cached_products:
-            #return Response(headers={"Content-Type": "application/json"},
-                            #response=json.dumps(cached_products), status=200)
-        #user = User.query.all()  
+        # if cached_products:
+        # return Response(headers={"Content-Type": "application/json"},
+        # response=json.dumps(cached_products), status=200)
+        #user = User.query.all()
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
         data.add_control_products_all()
-        
+
         #products_json = []
         #data["items"] = []
         for product in products:
@@ -910,10 +918,11 @@ class ProductsByCategory(Resource):
                 'reviews': [review.serialize(include_product=False, include_user=False) for review in product.reviews],
                 'categories': [category.serialize(long=False) for category in product.categories],
             })
-            item.add_control("item", api.url_for(ProductItem, username=item["user_name"], product=item["name"]))
-            item.add_control("category", api.url_for(CategoryItem, category=Category.query.filter_by(name=item["categories"][0]["name"]).first()))
+            item.add_control("item", api.url_for(
+                ProductItem, username=item["user_name"], product=item["name"]))
+            item.add_control("category", api.url_for(CategoryItem, category=Category.query.filter_by(
+                name=item["categories"][0]["name"]).first()))
             data["items"].append(item)
-
 
         cache.set("products_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
@@ -931,7 +940,7 @@ class ReviewItem(Resource):
         This function is used to fetch the information of a single review.
         The function requires a product name and a username.
         """
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -982,7 +991,7 @@ class ReviewItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -990,7 +999,7 @@ class ReviewItem(Resource):
         try:
             validate(request.json, Review.json_schema())
         except ValidationError as e_v:
-            raise BadRequest(description=str(e_v))
+            raise BadRequest(description=str(e_v)) from e_v
 
         prod = Product.query.filter_by(name=product).first()
         review = Review.query.filter_by(user_name=username).first()
@@ -1024,7 +1033,7 @@ class ReviewItem(Resource):
     def delete(self, username, product):
         """
         This function is used to delete reviews from the db.
-        """    
+        """
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1050,7 +1059,7 @@ class ReviewCollection(Resource):
         """
         This function is used to look up all reviews in the db.
         """
-    
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1078,10 +1087,11 @@ class ReviewCollection(Resource):
                 # 'user': review.user.serialize(),
                 # 'product': review.product.serialize(),
             })
-            item.add_control("item", api.url_for(ReviewItem, product=item["product_name"], username=item["user_name"]))
+            item.add_control("item", api.url_for(
+                ReviewItem, product=item["product_name"], username=item["user_name"]))
             item.add_control(
-            "commercemeta:reviews-by", 
-            href=url_for("reviews_by", user=item["user_name"])
+                "commercemeta:reviews-by",
+                href=url_for("reviews_by", user=item["user_name"])
             )
             data["items"].append(item)
 
@@ -1090,7 +1100,7 @@ class ReviewCollection(Resource):
             headers={"Content-Type": "application/json"},
             response=json.dumps(data),
             status=200, mimetype=MASON
-        )  
+        )
 
     def post(self):
         """
@@ -1100,7 +1110,7 @@ class ReviewCollection(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1108,8 +1118,8 @@ class ReviewCollection(Resource):
         try:
             validate(request.json, Review.json_schema())
         except ValidationError as e_v:
-            raise BadRequest(description=str(e_v))
-            
+            raise BadRequest(description=str(e_v)) from e_v
+
         user = User.query.filter_by(
             name=request.json['user_name']).first()
         product = Product.query.filter_by(
@@ -1137,22 +1147,22 @@ class ReviewCollection(Resource):
         response.status_code = 201
         return response
 
+
 class ReviewsByUser(Resource):
     def get(self, user):
-      
 
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
             return is_authorized
-        
+
         #review_user = User.query.filter_by(name=user).first()
         reviews = User.query.filter_by(name=user).first().reviews
 
         #cached_reviews = cache.get("reviews_all")
-        #if cached_reviews:
-            #return Response(headers={"Content-Type": "application/json"},
-                            #response=json.dumps(cached_reviews), status=200)
+        # if cached_reviews:
+        # return Response(headers={"Content-Type": "application/json"},
+        # response=json.dumps(cached_reviews), status=200)
         data = CommerceMetaBuilder(items=[])
         data.add_namespace("commercemeta", LINK_RELATIONS_URL)
         data.add_control("self", href=request.path)
@@ -1170,7 +1180,8 @@ class ReviewsByUser(Resource):
                 # 'user': review.user.serialize(),
                 # 'product': review.product.serialize(),
             })
-            item.add_control("item", api.url_for(ReviewItem, username=item["user_name"], product=item["product_name"]))
+            item.add_control("item", api.url_for(
+                ReviewItem, username=item["user_name"], product=item["product_name"]))
             item.add_control("customer", api.url_for(UserItem, user=user))
             data["items"].append(item)
 
@@ -1179,8 +1190,8 @@ class ReviewsByUser(Resource):
             headers={"Content-Type": "application/json"},
             response=json.dumps(data),
             status=200, mimetype=MASON
-        )  
-        
+        )
+
 
 class CategoryItem(Resource):
     """
@@ -1194,7 +1205,7 @@ class CategoryItem(Resource):
         """
         This function is used to fetch the information of a single category.
         """
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1210,13 +1221,13 @@ class CategoryItem(Resource):
         data.add_control("self", href=request.path)
         data.add_control("collection", href=api.url_for(CategoryCollection))
         data.add_control_edit_category(category)
-        data.add_control_delete_category (category)
-        #data.add_control(
-            #"commercemeta:products-by", 
-            #href=url_for("products_by_category", category=category)
-        #)
+        data.add_control_delete_category(category)
+        # data.add_control(
+        # "commercemeta:products-by",
+        #href=url_for("products_by_category", category=category)
+        # )
         return Response(json.dumps(data), 200, mimetype=MASON)
-    
+
     def put(self, category):
         """
         This function is used to modify an existing category. Data for 
@@ -1225,7 +1236,7 @@ class CategoryItem(Resource):
         """
         if request.content_type != 'application/json':
             raise UnsupportedMediaType
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1240,19 +1251,18 @@ class CategoryItem(Resource):
                 Product.name.in_(request.json['product_names'])).all()
             if not products:
                 raise BadRequest(description="Product names do not exist")
-            else:
-                category.products = products
+            category.products = products
         db.session.add(category)
         db.session.commit()
         cache.set("category_"+str(category.id), category.serialize())
         cache.delete("categories_all")
         return Response(status=204)
-    
+
     def delete(self, category):
         """
         This function can be used to delete a category.
         """
-        
+
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1261,6 +1271,8 @@ class CategoryItem(Resource):
         db.session.commit()
         cache.delete("categories_all")
         return Response(status=204)
+
+
 class CategoryCollection(Resource):
     """
     This class includes the requests for all categories. This class can be 
@@ -1292,12 +1304,14 @@ class CategoryCollection(Resource):
                 'image': category.image,
                 # 'products': [product.serialize(long=False) for product in category.products]
             })
-            item.add_control("item", api.url_for(CategoryItem, category=category))
+            item.add_control("item", api.url_for(
+                CategoryItem, category=category))
             data["items"].append(item)
 
         cache.set("categories_all", data["items"])
         return Response(headers={"Content-Type": "application/json"},
                         response=json.dumps(data), status=200, mimetype=MASON)
+
     def post(self):
         """
         This function is used to create new categories. The data for the new
@@ -1305,7 +1319,7 @@ class CategoryCollection(Resource):
         further parameter information.
         """
         if request.content_type != 'application/json':
-            raise UnsupportedMediaType        
+            raise UnsupportedMediaType
         auth_header = request.headers.get('Authorization')
         is_authorized = authorizeUser(auth_header)
         if is_authorized != "authorized":
@@ -1319,7 +1333,7 @@ class CategoryCollection(Resource):
             products = Product.query.filter(
                 Product.name.in_(request.json['product_names'])).all()
             if not products:
-               raise BadRequest(description="Product names do not exist")
+                raise BadRequest(description="Product names do not exist")
         try:
             category = Category(
                 name=request.json['name'],
@@ -1340,18 +1354,24 @@ class CategoryCollection(Resource):
         return response
 # Routing resources
 
+
 api.add_resource(UserAuth, "/api/users/auth/")
 api.add_resource(UserItem, "/api/users/<user:user>/", endpoint="user")
 api.add_resource(UserCollection, "/api/users/", endpoint="users")
-api.add_resource(ProductItem, "/api/users/<username>/products/<product>/", endpoint="product")
+api.add_resource(
+    ProductItem, "/api/users/<username>/products/<product>/", endpoint="product")
 api.add_resource(ProductCollection,
                  "/api/users/products/",
-                 "/api/categories/products/"
-                 , endpoint="products")
-api.add_resource(ProductsByUser, "/api/users/<user>/products/", endpoint="products_by_user")
-api.add_resource(ProductsByCategory, "/api/categories/<category>/products/", endpoint="products_by_category")
-api.add_resource(ReviewItem, "/api/users/<username>/reviews/<product>/", endpoint="review")
+                 "/api/categories/products/", endpoint="products")
+api.add_resource(ProductsByUser, "/api/users/<user>/products/",
+                 endpoint="products_by_user")
+api.add_resource(ProductsByCategory, "/api/categories/<category>/products/",
+                 endpoint="products_by_category")
+api.add_resource(
+    ReviewItem, "/api/users/<username>/reviews/<product>/", endpoint="review")
 api.add_resource(ReviewCollection, "/api/users/reviews/", endpoint="reviews")
-api.add_resource(ReviewsByUser, "/api/users/<user>/reviews/", endpoint="reviews_by")
-api.add_resource(CategoryItem, "/api/categories/<category:category>/", endpoint="category")
+api.add_resource(ReviewsByUser, "/api/users/<user>/reviews/",
+                 endpoint="reviews_by")
+api.add_resource(
+    CategoryItem, "/api/categories/<category:category>/", endpoint="category")
 api.add_resource(CategoryCollection, "/api/categories/", endpoint="categories")
