@@ -638,7 +638,7 @@ class ProductItem(Resource):
 
         return Response(json.dumps(data), 200, mimetype=MASON)
 
-    def put(self, product):
+    def put(self, username, product):
         """
         This function is used to modify an existing product in the db.
         The function requires a valid JSON object, which is validated prior 
@@ -695,7 +695,7 @@ class ProductItem(Resource):
             )
         return Response(status=204)
 
-    def delete(self, product):
+    def delete(self, username, product):
         """
         This function is used to delete a product from the db.
         """
