@@ -28,3 +28,7 @@ path.py==12.5.0
 py3_validate_email==1.0.5
 PyJWT==2.6.0
 numpy==1.24.3
+Flask_Cors==3.0.10
+Flask_Caching==2.0.2
+Flask_RESTful==0.3.9
+flask_sqlalchemy==3.0.3

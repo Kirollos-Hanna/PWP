@@ -4,6 +4,7 @@ Also, the converters are set.
 """
 import os
 from flask import Flask
+from flask_cors import CORS
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 from productsapi.db import db
@@ -41,6 +42,7 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+    CORS(app)
     db.init_app(app)
     # Map converters
     app.url_map.converters['user'] = UserConverter
