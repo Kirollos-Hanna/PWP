@@ -27,3 +27,4 @@ jsonschema==4.17.3
 path.py==12.5.0
 py3_validate_email==1.0.5
 PyJWT==2.6.0
+numpy==1.24.3
