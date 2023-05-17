@@ -147,7 +147,10 @@ const NewCategory = (props) => {
 
 export const Authorization = (props) => {
   const handleClick = () => {
-    console.log(document.getElementsByName('user_name'))
+    var user = (document.getElementById('user_name').value);
+    var email = (document.getElementById('user_email').value);
+    var password = (document.getElementById('user_password').value);
+    console.log(user, email, password)
   };
   return(
     <div style={{display: 'inline-block', border: '1px solid black', padding: 20}}>
@@ -155,17 +158,17 @@ export const Authorization = (props) => {
       <form>
         <p>Name</p>
         <label>
-        <input type='text' name='user_name'/>
+        <input type='text' id ='user_name'/>
         </label>
 
         <p>Email</p>
         <label>
-        <input type='text' name='token'/>
+        <input type='text' id ='user_email'/>
         </label>
 
         <p>Password</p>
         <label>
-        <input type='text' name='token'/>
+        <input type='text' id ='user_password'/>
         </label>
 
       </form>
