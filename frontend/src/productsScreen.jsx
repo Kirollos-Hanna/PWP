@@ -1,4 +1,4 @@
-/* eslint-disable */
+
 import React from 'react';
 import {Authorization} from './categoriesScreen.jsx'
 import { useTable } from 'react-table'
