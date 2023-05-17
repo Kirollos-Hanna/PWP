@@ -1,4 +1,4 @@
-/* eslint-disable */
+
 import React from 'react';
 import { useTable } from 'react-table'
 import {
@@ -147,7 +147,7 @@ const NewCategory = (props) => {
 
 export const Authorization = (props) => {
   const handleClick = () => {
-    console.log(document.getElementsByName('category_name'))
+    console.log(document.getElementsByName('user_name'))
   };
   return(
     <div style={{display: 'inline-block', border: '1px solid black', padding: 20}}>
@@ -155,7 +155,7 @@ export const Authorization = (props) => {
       <form>
         <p>Name</p>
         <label>
-        <input type='text' name='category_name'/>
+        <input type='text' name='user_name'/>
         </label>
 
         <p>Email</p>
