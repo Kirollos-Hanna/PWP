@@ -104,7 +104,7 @@ const Categories = (props) => {
      </table>
      <div>
         <li>
-          <Link to="/products">View all products</Link>
+          <Link to="/products/">View all products</Link>
         </li>
      </div>
      </div>
@@ -145,41 +145,6 @@ const NewCategory = (props) => {
   )
 }
 
-export const Authorization = (props) => {
-  const handleClick = () => {
-    var user = (document.getElementById('user_name').value);
-    var email = (document.getElementById('user_email').value);
-    var password = (document.getElementById('user_password').value);
-    console.log(user, email, password)
-  };
-  return(
-    <div style={{display: 'inline-block', border: '1px solid black', padding: 20}}>
-      <h1>Authorization</h1>
-      <form>
-        <p>Name</p>
-        <label>
-        <input type='text' id ='user_name'/>
-        </label>
-
-        <p>Email</p>
-        <label>
-        <input type='text' id ='user_email'/>
-        </label>
-
-        <p>Password</p>
-        <label>
-        <input type='text' id ='user_password'/>
-        </label>
-
-      </form>
-      
-      <button type="button" onClick={handleClick}>
-        Authorize
-      </button>
-      <p>Authorization status</p>
-    </div>
-  )
-}
 
 function CategoriesScreen() {
     return(
@@ -188,7 +153,6 @@ function CategoriesScreen() {
                 <Categories/>
                 <NewCategory/>
             </div>
-            <Authorization/>
         </div>
     )
 }

@@ -1,5 +1,4 @@
 import React from 'react';
-import {Authorization} from './categoriesScreen.jsx'
 import {ProductsTable} from './productsScreen.jsx'
 
 const ViewProductsByToken2 = (props) => {
@@ -61,7 +60,6 @@ function ViewProductScreen() {
                 </div>
                 <DeleteProduct/>
             </div>
-            <Authorization/>
         </div>
     )
 }

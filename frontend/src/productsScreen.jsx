@@ -1,11 +1,8 @@
 
 import React from 'react';
-import {Authorization} from './categoriesScreen.jsx'
 import { useTable } from 'react-table'
-import {
+import { Link, Navigate, useLocation } from 'react-router-dom';
 
-  Link
-} from 'react-router-dom';
 
 export const ProductsTable = (props) => {
    const data = React.useMemo(
@@ -133,9 +130,6 @@ export const ProductsTable = (props) => {
 const ViewProductsByToken = (props) => {
     return(
      <div style={{display: 'inline-block', alignItems: 'center', justifyContent: 'center'}}>
-        <div style={{display: 'flex', flexDirection: 'row'}}>
-        <a href=''>View all users</a>
-        </div>
         <div>
           <li>
             <Link to="/api/categories/">View all categories</Link>
@@ -277,6 +271,13 @@ const NewProduct = (props) => {
 }
 
 function ProductsScreen() {
+    const token = localStorage.getItem('auth-token');
+    const location = useLocation();
+
+    if (!token) {
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+
     return(
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', alignItems: 'center', justifyItems: 'center', flexDirection: 'row'}}>
             <div style={{flex: 1,display: 'flex', flexDirection: 'column', height: '100%'}}>
@@ -286,7 +287,6 @@ function ProductsScreen() {
                 </div>
                 <NewProduct/>
             </div>
-            <Authorization/>
         </div>
     )
 }
