@@ -1,5 +1,10 @@
+/* eslint-disable */
 import React from 'react';
 import { useTable } from 'react-table'
+import {
+
+  Link
+} from 'react-router-dom';
 
 const Categories = (props) => {
    const data = React.useMemo(
@@ -98,7 +103,9 @@ const Categories = (props) => {
        </tbody>
      </table>
      <div>
-      <a href=''>View all products</a>
+        <li>
+          <Link to="/products">View all products</Link>
+        </li>
      </div>
      </div>
      <div>
@@ -139,13 +146,16 @@ const NewCategory = (props) => {
 }
 
 export const Authorization = (props) => {
+  const handleClick = () => {
+    console.log(document.getElementsByName('category_name'))
+  };
   return(
     <div style={{display: 'inline-block', border: '1px solid black', padding: 20}}>
       <h1>Authorization</h1>
       <form>
         <p>Name</p>
         <label>
-        <input type='text' name='category'/>
+        <input type='text' name='category_name'/>
         </label>
 
         <p>Email</p>
@@ -159,7 +169,10 @@ export const Authorization = (props) => {
         </label>
 
       </form>
-      <input type='submit' value='Authorize'/>
+      
+      <button type="button" onClick={handleClick}>
+        Authorize
+      </button>
       <p>Authorization status</p>
     </div>
   )
