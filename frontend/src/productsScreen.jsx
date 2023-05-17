@@ -1,6 +1,11 @@
+/* eslint-disable */
 import React from 'react';
 import {Authorization} from './categoriesScreen.jsx'
 import { useTable } from 'react-table'
+import {
+
+  Link
+} from 'react-router-dom';
 
 export const ProductsTable = (props) => {
    const data = React.useMemo(
@@ -64,7 +69,9 @@ export const ProductsTable = (props) => {
      rows,
      prepareRow,
    } = useTable({ columns, data})
- 
+   
+
+
    return (
     <div style={{
      flex: 1,
@@ -130,7 +137,9 @@ const ViewProductsByToken = (props) => {
         <a href=''>View all users</a>
         </div>
         <div>
-        <a href=''>View all categories</a>
+          <li>
+            <Link to="/api/categories/">View all categories</Link>
+          </li>
         </div>
         <div>
         <form>
@@ -281,5 +290,7 @@ function ProductsScreen() {
         </div>
     )
 }
+
+
 
 export default ProductsScreen;
